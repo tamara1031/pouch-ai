@@ -97,6 +97,8 @@ func (k *Key) Validate() error {
 	return nil
 }
 
+var ErrBudgetExceeded = fmt.Errorf("budget limit exceeded")
+
 type Repository interface {
 	Save(ctx context.Context, k *Key) error
 	GetByID(ctx context.Context, id ID) (*Key, error)
@@ -105,5 +107,6 @@ type Repository interface {
 	Update(ctx context.Context, k *Key) error
 	Delete(ctx context.Context, id ID) error
 	IncrementUsage(ctx context.Context, id ID, amount float64) error
+	IncrementUsageWithLimit(ctx context.Context, id ID, amount float64) error
 	ResetUsage(ctx context.Context, id ID, lastResetAt time.Time) error
 }

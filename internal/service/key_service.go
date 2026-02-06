@@ -134,6 +134,20 @@ func (s *KeyService) IncrementUsage(ctx context.Context, id domain.ID, amount fl
 	return s.repo.IncrementUsage(ctx, id, amount)
 }
 
+func (s *KeyService) ReserveUsage(ctx context.Context, id domain.ID, amount float64) error {
+	return s.repo.IncrementUsageWithLimit(ctx, id, amount)
+}
+
+func (s *KeyService) CompleteUsage(ctx context.Context, id domain.ID, realCost float64, reservedCost float64) error {
+	// The difference can be negative (if realCost < reservedCost), which means we refund the difference.
+	diff := realCost - reservedCost
+	// If diff is 0, we don't need to do anything
+	if diff == 0 {
+		return nil
+	}
+	return s.repo.IncrementUsage(ctx, id, diff)
+}
+
 func (s *KeyService) GetProviderUsage(ctx context.Context) (map[string]float64, error) {
 	usage := make(map[string]float64)
 	for _, p := range s.registry.List() {

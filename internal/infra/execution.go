@@ -44,8 +44,10 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 		pricing, _ := req.Provider.GetPricing(req.Model)
 
 		inputCost := 0.0
+		inputTokens := 0
 		if inputUsage != nil {
 			inputCost = inputUsage.TotalCost
+			inputTokens = inputUsage.InputTokens
 		}
 		outputCost := float64(outputTokens) / 1000.0 * pricing.Output
 
@@ -53,7 +55,7 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 			StatusCode:   resp.StatusCode,
 			Header:       resp.Header,
 			Body:         io.NopCloser(bytes.NewBuffer(body)),
-			PromptTokens: inputUsage.InputTokens,
+			PromptTokens: inputTokens,
 			OutputTokens: outputTokens,
 			TotalCost:    inputCost + outputCost,
 		}, nil
@@ -62,8 +64,10 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 	// 4. For streaming, we return the body directly but wrapped in a CountingReader.
 	inputUsage, _ := req.Provider.EstimateUsage(req.Model, req.RawBody)
 	inputCost := 0.0
+	inputTokens := 0
 	if inputUsage != nil {
 		inputCost = inputUsage.TotalCost
+		inputTokens = inputUsage.InputTokens
 	}
 
 	// We wrap the body to count tokens and update usage when it's closed.
@@ -75,7 +79,7 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 		StatusCode:   resp.StatusCode,
 		Header:       resp.Header,
 		Body:         resp.Body, // TODO: Wrap in CountingReader
-		PromptTokens: inputUsage.InputTokens,
+		PromptTokens: inputTokens,
 		TotalCost:    inputCost,
 	}, nil
 }

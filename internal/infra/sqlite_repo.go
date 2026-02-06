@@ -94,6 +94,38 @@ func (r *SQLiteKeyRepository) IncrementUsage(ctx context.Context, id domain.ID, 
 	return err
 }
 
+func (r *SQLiteKeyRepository) IncrementUsageWithLimit(ctx context.Context, id domain.ID, amount float64) error {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE app_keys
+		SET budget_usage = budget_usage + ?
+		WHERE id = ?
+		  AND (budget_limit <= 0 OR budget_usage + ? <= budget_limit)
+	`, amount, id, amount)
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		// Verify if the key exists to return a proper error
+		exists := false
+		err := r.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM app_keys WHERE id = ?)", id).Scan(&exists)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return sql.ErrNoRows
+		}
+		return domain.ErrBudgetExceeded
+	}
+
+	return nil
+}
+
 func (r *SQLiteKeyRepository) ResetUsage(ctx context.Context, id domain.ID, lastResetAt time.Time) error {
 	_, err := r.db.ExecContext(ctx, "UPDATE app_keys SET budget_usage = 0, last_reset_at = ? WHERE id = ?", lastResetAt.Unix(), id)
 	return err
