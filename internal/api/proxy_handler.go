@@ -2,7 +2,6 @@ package api
 
 import (
 	"io"
-	"net/http"
 	"pouch-ai/internal/domain"
 	"pouch-ai/internal/service"
 
@@ -24,27 +23,27 @@ func NewProxyHandler(ps *service.ProxyService, r domain.Registry) *ProxyHandler 
 func (h *ProxyHandler) Proxy(c echo.Context) error {
 	body, err := io.ReadAll(c.Request().Body)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Failed to read body")
+		return BadRequest(c, "Failed to read body")
 	}
 
 	appKey, ok := c.Get("app_key").(*domain.Key)
 	if !ok {
-		return echo.NewHTTPError(http.StatusUnauthorized, "App Key not found")
+		return Unauthorized(c, "App Key not found")
 	}
 
 	// Identify Provider
 	provName := appKey.Provider
 	if provName == "" {
-		provName = "openai"
+		return BadRequest(c, "Provider not specified for this key")
 	}
 	prov, err := h.registry.Get(provName)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Provider not found")
+		return InternalError(c, "Provider not found")
 	}
 
 	model, isStream, err := prov.ParseRequest(body)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		return BadRequest(c, "Invalid request body")
 	}
 
 	req := &domain.Request{
@@ -58,8 +57,9 @@ func (h *ProxyHandler) Proxy(c echo.Context) error {
 
 	resp, err := h.proxyService.Execute(req)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadGateway, err.Error())
+		return BadGateway(c, err.Error())
 	}
+	defer resp.Body.Close()
 
 	// Handle response
 	if isStream {
@@ -68,5 +68,5 @@ func (h *ProxyHandler) Proxy(c echo.Context) error {
 		c.Response().Header().Set("Connection", "keep-alive")
 	}
 
-	return c.Blob(resp.StatusCode, c.Response().Header().Get("Content-Type"), resp.Body)
+	return c.Stream(resp.StatusCode, c.Response().Header().Get("Content-Type"), resp.Body)
 }

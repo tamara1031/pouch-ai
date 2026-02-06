@@ -76,6 +76,24 @@ func (k *Key) Validate() error {
 	if k.Name == "" {
 		return fmt.Errorf("key name is required")
 	}
+	if k.Provider == "" {
+		return fmt.Errorf("provider is required")
+	}
+
+	switch k.Budget.Period {
+	case "monthly", "weekly", "none", "":
+		// OK
+	default:
+		return fmt.Errorf("invalid budget period: %s", k.Budget.Period)
+	}
+
+	switch k.RateLimit.Period {
+	case "second", "minute", "none", "":
+		// OK
+	default:
+		return fmt.Errorf("invalid rate limit period: %s", k.RateLimit.Period)
+	}
+
 	return nil
 }
 

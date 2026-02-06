@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"io"
 )
 
 type Request struct {
@@ -15,7 +16,7 @@ type Request struct {
 
 type Response struct {
 	StatusCode   int
-	Body         []byte
+	Body         io.ReadCloser
 	PromptTokens int
 	OutputTokens int
 	TotalCost    float64

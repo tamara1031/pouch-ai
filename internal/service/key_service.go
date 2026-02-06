@@ -11,14 +11,21 @@ import (
 )
 
 type KeyService struct {
-	repo domain.Repository
+	repo     domain.Repository
+	registry domain.Registry
 }
 
-func NewKeyService(repo domain.Repository) *KeyService {
-	return &KeyService{repo: repo}
+func NewKeyService(repo domain.Repository, registry domain.Registry) *KeyService {
+	return &KeyService{repo: repo, registry: registry}
 }
 
 func (s *KeyService) CreateKey(ctx context.Context, name string, provider string, expiresAt *int64, budgetLimit float64, budgetPeriod string, isMock bool, mockConfig string, rateLimit int, ratePeriod string) (string, *domain.Key, error) {
+	if provider != "" {
+		if _, err := s.registry.Get(provider); err != nil {
+			return "", nil, err
+		}
+	}
+
 	rawKey, err := s.generateRandomKey()
 	if err != nil {
 		return "", nil, err
@@ -79,13 +86,19 @@ func (s *KeyService) ListKeys(ctx context.Context) ([]*domain.Key, error) {
 	return s.repo.List(ctx)
 }
 
-func (s *KeyService) UpdateKey(ctx context.Context, id int64, name string, provider string, budgetLimit float64, isMock bool, mockConfig string, rateLimit int, ratePeriod string) error {
+func (s *KeyService) UpdateKey(ctx context.Context, id int64, name string, provider string, budgetLimit float64, isMock bool, mockConfig string, rateLimit int, ratePeriod string, expiresAt *int64) error {
 	k, err := s.repo.GetByID(ctx, domain.ID(id))
 	if err != nil {
 		return err
 	}
 	if k == nil {
 		return fmt.Errorf("key not found")
+	}
+
+	if provider != "" && provider != k.Provider {
+		if _, err := s.registry.Get(provider); err != nil {
+			return err
+		}
 	}
 
 	k.Name = name
@@ -95,6 +108,15 @@ func (s *KeyService) UpdateKey(ctx context.Context, id int64, name string, provi
 	k.MockConfig = mockConfig
 	k.RateLimit.Limit = rateLimit
 	k.RateLimit.Period = ratePeriod
+
+	if expiresAt != nil {
+		t := time.Unix(*expiresAt, 0)
+		k.ExpiresAt = &t
+	}
+
+	if err := k.Validate(); err != nil {
+		return err
+	}
 
 	return s.repo.Update(ctx, k)
 }

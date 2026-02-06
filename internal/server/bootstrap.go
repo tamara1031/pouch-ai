@@ -39,13 +39,19 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 
 	tokenCounter := infra.NewTiktokenCounter()
 
-	openaiProv := infra.NewOpenAIProvider(os.Getenv("OPENAI_API_KEY"), targetURL, pricing, tokenCounter)
-
 	registry := domain.NewRegistry()
-	registry.Register(openaiProv)
+
+	// Register OpenAI Provider
+	openaiKey := os.Getenv("OPENAI_API_KEY")
+	if openaiKey != "" {
+		openaiProv := infra.NewOpenAIProvider(openaiKey, targetURL, pricing, tokenCounter)
+		registry.Register(openaiProv)
+	}
+
+	// TODO: Add more providers (Anthropic, Gemini, etc.) here
 
 	// 3. Initialize Application Services
-	keyService := service.NewKeyService(keyRepo)
+	keyService := service.NewKeyService(keyRepo, registry)
 
 	executionHandler := infra.NewExecutionHandler()
 	proxyService := service.NewProxyService(

@@ -65,9 +65,42 @@ func migrate(db *sql.DB) error {
 	}
 
 	// Add columns if they don't exist (for existing DBs)
-	db.Exec("ALTER TABLE app_keys ADD COLUMN provider TEXT NOT NULL DEFAULT 'openai'")
-	db.Exec("ALTER TABLE app_keys ADD COLUMN rate_limit INTEGER DEFAULT 10")
-	db.Exec("ALTER TABLE app_keys ADD COLUMN rate_period TEXT DEFAULT 'minute'")
+	addColumn(db, "app_keys", "provider", "TEXT NOT NULL DEFAULT 'openai'")
+	addColumn(db, "app_keys", "rate_limit", "INTEGER DEFAULT 10")
+	addColumn(db, "app_keys", "rate_period", "TEXT DEFAULT 'minute'")
 
 	return nil
+}
+
+func addColumn(db *sql.DB, table, column, definition string) {
+	query := fmt.Sprintf("PRAGMA table_info(%s)", table)
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Printf("Failed to check table info for %s: %v", table, err)
+		return
+	}
+	defer rows.Close()
+
+	exists := false
+	for rows.Next() {
+		var cid int
+		var name, dtype string
+		var notnull, pk int
+		var dfltValue interface{}
+		if err := rows.Scan(&cid, &name, &dtype, &notnull, &dfltValue, &pk); err == nil {
+			if name == column {
+				exists = true
+				break
+			}
+		}
+	}
+
+	if !exists {
+		alterQuery := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, definition)
+		if _, err := db.Exec(alterQuery); err != nil {
+			log.Printf("Failed to add column %s to %s: %v", column, table, err)
+		} else {
+			log.Printf("Added column %s to table %s", column, table)
+		}
+	}
 }

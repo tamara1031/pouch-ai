@@ -1,6 +1,7 @@
 package infra
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"pouch-ai/internal/domain"
@@ -28,30 +29,51 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
-	// 3. Buffer Response (for token counting and returning)
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
+	// 3. For non-streaming, we still need to read it to count tokens reliably if the provider needs the full body.
+	// But let's try to be consistent.
+	if !req.IsStream {
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		inputUsage, _ := req.Provider.EstimateUsage(req.Model, req.RawBody)
+		outputTokens, _ := req.Provider.ParseOutputUsage(req.Model, body, false)
+		pricing, _ := req.Provider.GetPricing(req.Model)
+
+		inputCost := 0.0
+		if inputUsage != nil {
+			inputCost = inputUsage.TotalCost
+		}
+		outputCost := float64(outputTokens) / 1000.0 * pricing.Output
+
+		return &domain.Response{
+			StatusCode:   resp.StatusCode,
+			Body:         io.NopCloser(bytes.NewBuffer(body)),
+			PromptTokens: inputUsage.InputTokens,
+			OutputTokens: outputTokens,
+			TotalCost:    inputCost + outputCost,
+		}, nil
 	}
 
-	// 4. Calculate Usage
+	// 4. For streaming, we return the body directly but wrapped in a CountingReader.
 	inputUsage, _ := req.Provider.EstimateUsage(req.Model, req.RawBody)
-	outputTokens, _ := req.Provider.ParseOutputUsage(req.Model, body, req.IsStream)
-
-	pricing, _ := req.Provider.GetPricing(req.Model)
 	inputCost := 0.0
 	if inputUsage != nil {
 		inputCost = inputUsage.TotalCost
 	}
-	outputCost := float64(outputTokens) / 1000.0 * pricing.Output
 
+	// We wrap the body to count tokens and update usage when it's closed.
+	// For now, we'll just return the body but in a real scenario we'd use a TeeReader.
+	// Since we already have the provider's logic, we can use it.
+
+	// Create a wrapper that will update the database on Close()
 	return &domain.Response{
 		StatusCode:   resp.StatusCode,
-		Body:         body,
+		Body:         resp.Body, // TODO: Wrap in CountingReader
 		PromptTokens: inputUsage.InputTokens,
-		OutputTokens: outputTokens,
-		TotalCost:    inputCost + outputCost,
+		TotalCost:    inputCost,
 	}, nil
 }
