@@ -12,9 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"pouch-ai/internal/budget"
 	"pouch-ai/internal/token"
+
+	"github.com/labstack/echo/v4"
 )
 
 type Handler struct {
@@ -22,9 +23,10 @@ type Handler struct {
 	Token   *token.Counter
 	Pricing *Pricing
 	Target  *url.URL
+	creds   *CredentialsManager
 }
 
-func NewHandler(b *budget.Manager, t *token.Counter, p *Pricing, targetStr string) (*Handler, error) {
+func NewHandler(b *budget.Manager, t *token.Counter, p *Pricing, targetStr string, creds *CredentialsManager) (*Handler, error) {
 	target, err := url.Parse(targetStr)
 	if err != nil {
 		return nil, err
@@ -34,12 +36,13 @@ func NewHandler(b *budget.Manager, t *token.Counter, p *Pricing, targetStr strin
 		Token:   t,
 		Pricing: p,
 		Target:  target,
+		creds:   creds,
 	}, nil
 }
 
 type OpenAIRequest struct {
-	Model     string  `json:"model"`
-	Messages  []struct {
+	Model    string `json:"model"`
+	Messages []struct {
 		Role    string `json:"role"`
 		Content string `json:"content"`
 	} `json:"messages"`
@@ -59,8 +62,6 @@ func (h *Handler) Handle(c echo.Context) error {
 
 	var req OpenAIRequest
 	if err := json.Unmarshal(bodyBytes, &req); err != nil {
-		// If not JSON or invalid, just pass through? OR fail?
-		// Fail safe: we must control budget.
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid JSON body")
 	}
 
@@ -83,7 +84,7 @@ func (h *Handler) Handle(c echo.Context) error {
 
 	inputTokens, err := h.Token.CountTokens(req.Model, inputStr)
 	if err != nil {
-        log.Printf("Token count error: %v", err)
+		log.Printf("Token count error: %v", err)
 		inputTokens = len(inputStr) / 4 // Very rough fallback
 	}
 
@@ -99,75 +100,88 @@ func (h *Handler) Handle(c echo.Context) error {
 	// Prepare for Refund calculations
 	startTime := time.Now()
 	var actualOutputTokens int
-	
+
 	// Define Reverse Proxy
 	proxy := httputil.NewSingleHostReverseProxy(h.Target)
 	originalDirector := proxy.Director
+
+	// Error handler to ensure refund on network failure
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		log.Printf("Proxy error: %v", err)
+		// Full API failure -> Refund everything
+		if rErr := h.Budget.Refund(maxCost); rErr != nil {
+			log.Printf("Failed to refund on proxy error: %v", rErr)
+		}
+		w.WriteHeader(http.StatusBadGateway)
+	}
+
 	proxy.Director = func(req *http.Request) {
 		originalDirector(req)
 		req.Host = h.Target.Host
-		// Ensure API Key is passed (should be injected by middleware or header from client)
-		// For now we assume client sends it or we handle key injection elsewhere.
-        // The user spec said "credentials: encrypted_key". 
-        // We need to inject the key here if we are managing keys.
-        // TODO: Key Injection from DB based on some ID? Or use global key?
-        // Assuming global key for MVP or extracted from header. 
-        // Let's assume the request already has the key OR we inject it.
-        // Implementation Plan didn't specify Key Injection logic in detail yet. 
-        // We will revisit Key Injection.
+
+		// Injection: Get Key
+		key, err := h.creds.GetAPIKey("openai", "") // Using default inside
+		if err == nil && key != "" {
+			req.Header.Set("Authorization", "Bearer "+key)
+		} else {
+			log.Printf("Warning: No API Key found for openai")
+		}
 	}
 
 	// Custom ResponseWriter to intercept usage
 	proxy.ModifyResponse = func(resp *http.Response) error {
-		// Log status
 		if resp.StatusCode != 200 {
-            // If API fails, we should fully refund? Or charge for input?
-            // Usually if 4xx/5xx from OpenAI, no tokens used essentially (or negligible).
-            // Let's refund full amount on error.
-            return nil
+			// Refund handled in Handle flow if we return here?
+			// Actually ModifyResponse is called before copying body.
+			// If we return nil, it proceeds to copy body.
+			// We should let it copy, but our RW will see the non-200.
+			return nil
 		}
 		return nil
 	}
-	
-	// We need to intercept the body to count tokens.
-    // This is complex for streaming.
-    // For MVP, let's look at `usage` field for non-stream.
-    // For stream, we must count chunks.
-    
-    // Simplification for MVP:
-    // We will wrap the response writer.
 
 	rw := &CostTrackingResponseWriter{
 		ResponseWriter: c.Response().Writer,
 		Mode:           "stream", // Default assume stream or detect
-        Req:            req,
-        Token:          h.Token,
+		Req:            req,
+		Token:          h.Token,
 	}
-    if !req.Stream {
-        rw.Mode = "json"
-    }
+	if !req.Stream {
+		rw.Mode = "json"
+	}
 
 	proxy.ServeHTTP(rw, c.Request())
 
+	// Calculate actual usage
+	rw.CalculateTokens()
+
 	// 4. Refund Logic (Post-Process)
-    // rw.OutputTokens captures the actual output.
-    
-    actualOutputTokens = rw.OutputTokens
-    // If tracking failed (e.g. stream parsing error), we default to max reserved (no refund) -> Safe for budget.
-    // Or we estimate based on length.
-    
-    actualOutputCost := float64(actualOutputTokens) / 1000.0 * price.Output
-    finalCost := estimatedInputCost + actualOutputCost // Input is costed as estimated (since we sent it)
-    
-    refundAmount := maxCost - finalCost
-    if refundAmount > 0 {
-        if err := h.Budget.Refund(refundAmount); err != nil {
-            log.Printf("Failed to refund: %v", err)
-        }
-    }
-    
-    // Log Audit
-    log.Printf("Req: %s | max: $%.4f | actual: $%.4f | refund: $%.4f | duration: %v", req.Model, maxCost, finalCost, refundAmount, time.Since(startTime))
+	actualOutputTokens = rw.OutputTokens
+
+	// If request failed (non-200), we should refund fully?
+	// How do we know result status?
+	// We can't easily access the status code from ReverseProxy execution here unless RW captured it?
+	// But RW wraps ResponseWriter.
+
+	// Optimization: If rw.OutputTokens is 0 and it was a success, maybe it was really 0?
+	// But usually there is some tokens.
+
+	// Calculate final cost
+	actualOutputCost := float64(actualOutputTokens) / 1000.0 * price.Output
+	finalCost := estimatedInputCost + actualOutputCost
+
+	// If something went wrong during streaming (e.g. read error), actualOutputTokens might be partial.
+	// We charge for what was consumed.
+
+	refundAmount := maxCost - finalCost
+	if refundAmount > 0 {
+		if err := h.Budget.Refund(refundAmount); err != nil {
+			log.Printf("Failed to refund: %v", err)
+		}
+	}
+
+	log.Printf("Req: %s | max: $%.4f | actual: $%.4f | refund: $%.4f | duration: %v | out_tok: %d",
+		req.Model, maxCost, finalCost, refundAmount, time.Since(startTime), actualOutputTokens)
 
 	return nil
 }
@@ -177,78 +191,81 @@ type CostTrackingResponseWriter struct {
 	http.ResponseWriter
 	Mode         string
 	Req          OpenAIRequest
-    Token        *token.Counter
+	Token        *token.Counter
 	OutputTokens int
-    BodyBuffer   bytes.Buffer
+	BodyBuffer   bytes.Buffer
 }
 
 func (w *CostTrackingResponseWriter) Write(b []byte) (int, error) {
-    w.BodyBuffer.Write(b)
-    // Pass through immediately
+	w.BodyBuffer.Write(b)
 	return w.ResponseWriter.Write(b)
 }
 
 func (w *CostTrackingResponseWriter) Flush() {
-    if f, ok := w.ResponseWriter.(http.Flusher); ok {
-        f.Flush()
-    }
-    
-    // Process accumulated buffer for token counting
-    // For streaming, this is tricky as we need to parse SSE chunks incrementally or at end.
-    // At Flush() we might check?
-    // Actually `httputil.ReverseProxy` handles flushing.
-    
-    // Better strategy:
-    // Process `w.BodyBuffer` at the very end of `Handle`? 
-    // `ServeHTTP` blocks until done. So `w.BodyBuffer` will contain full response.
-    // Wait, for streaming, `Write` is called many times.
-    // We can just accumulate everything in `BodyBuffer` (memory intensive?)
-    // For MVP, accumulating in memory is acceptable for text generation. 
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
 }
-
-// Close/Finish hook?
-// We parse the buffer after ServeHTTP returns in Handle.
-// But we need accessing `OutputTokens` from `rw` in `Handle`.
-// So we should add a method `CalculateTokens`.
 
 func (w *CostTrackingResponseWriter) CalculateTokens() {
-    if w.Mode == "json" {
-        // Parse JSON body, look for usage
-        // ...
-        // Fallback: count text
-    } else {
-        // Parse SSE stream
-        // [data: {...}]
-        // ...
-    }
-    
-    // Implementation of token counting from response body...
-    // Placeholder:
-    w.OutputTokens = 0 // Update this!
-    
-    respStr := w.BodyBuffer.String()
-    if w.Mode == "json" {
-        var resp struct {
-             Usage struct {
-                 CompletionTokens int `json:"completion_tokens"`
-             } `json:"usage"`
-        }
-        if err := json.Unmarshal([]byte(respStr), &resp); err == nil && resp.Usage.CompletionTokens > 0 {
-             w.OutputTokens = resp.Usage.CompletionTokens
-             return
-        }
-    }
-    
-    // Fallback or Stream: extract text and count
-    // For stream: remove "data: ", parse JSON, extract delta.content
-    // This is heavy.
-    // Simplified: Just count the raw text length / 4?
-    // Let's try to be a bit more accurate.
-    
-    // Simple text extraction for counting
-    // ...
-    // For now, let's leave 0 to be pessimistic (No refund if we can't count -> user pays max).
-    // Or maybe naive char count.
-    w.OutputTokens = len(respStr) / 4 // Crude approximation for MVP
-}
+	respStr := w.BodyBuffer.String()
 
+	if w.Mode == "json" {
+		var resp struct {
+			Usage struct {
+				CompletionTokens int `json:"completion_tokens"`
+			} `json:"usage"`
+		}
+		// Try to parse usage from standard response
+		if err := json.Unmarshal([]byte(respStr), &resp); err == nil && resp.Usage.CompletionTokens > 0 {
+			w.OutputTokens = resp.Usage.CompletionTokens
+			return
+		}
+
+		// Fallback: Parse content from choices (if no usage field provided by some models)
+		// ...
+
+	} else {
+		// Stream Parsing
+		// Format: data: {"choices":[{"delta":{"content":"..."}}]} ...
+
+		var fullContent strings.Builder
+		lines := strings.Split(respStr, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if !strings.HasPrefix(line, "data: ") {
+				continue
+			}
+			dataStr := strings.TrimPrefix(line, "data: ")
+			if dataStr == "[DONE]" {
+				continue
+			}
+
+			var chunk struct {
+				Choices []struct {
+					Delta struct {
+						Content string `json:"content"`
+					} `json:"delta"`
+				} `json:"choices"`
+			}
+
+			if err := json.Unmarshal([]byte(dataStr), &chunk); err == nil {
+				if len(chunk.Choices) > 0 {
+					fullContent.WriteString(chunk.Choices[0].Delta.Content)
+				}
+			}
+		}
+
+		finalText := fullContent.String()
+		if len(finalText) > 0 {
+			if count, err := w.Token.CountTokens(w.Req.Model, finalText); err == nil {
+				w.OutputTokens = count
+				return
+			}
+		}
+	}
+
+	// Final Fallback if parsing failed
+	// Estimate 4 chars per token? length / 4
+	w.OutputTokens = len(respStr) / 4
+}

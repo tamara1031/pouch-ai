@@ -1,90 +1,138 @@
 ---
+import Layout from "../layouts/Layout.astro";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>pouch-ai Dashboard</title>
-	</head>
-	<body class="bg-base-200 min-h-screen p-8">
-		<div class="max-w-4xl mx-auto space-y-6">
-            <!-- Header -->
-            <div class="navbar bg-base-100 rounded-box shadow">
-                <div class="flex-1">
-                    <a class="btn btn-ghost text-xl">pouch-ai</a>
+<Layout title="Pouch AI Dashboard">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Budget Overview Card -->
+        <div class="card bg-base-100 shadow-xl border border-base-200">
+            <div class="card-body">
+                <h2 class="card-title text-2xl mb-2">Current Budget</h2>
+                <div class="flex items-baseline gap-1">
+                    <span
+                        class="text-4xl font-bold text-primary"
+                        id="budget-display">--.--</span
+                    >
+                    <span class="text-xl text-base-content/70">USD</span>
                 </div>
-                <div class="flex-none">
-                    <div class="badge badge-primary">v0.1.0</div>
+                <p class="text-sm text-base-content/60 mt-2">
+                    Remaining balance available for requests.
+                </p>
+                <div class="card-actions justify-end mt-4">
+                    <button
+                        class="btn btn-sm btn-outline btn-primary"
+                        onclick="window.location.reload()">Refresh</button
+                    >
                 </div>
             </div>
+        </div>
 
-            <!-- Budget Card -->
-            <div class="card bg-base-100 shadow-xl">
-                <div class="card-body">
-                    <h2 class="card-title">Budget Status</h2>
-                    <div class="stats shadow">
-                        <div class="stat">
-                            <div class="stat-title">Current Balance</div>
-                            <div class="stat-value text-primary" id="balanceDisplay">$0.00</div>
-                            <div class="stat-desc">Remaining funds</div>
-                        </div>
+        <!-- Add Funds Card -->
+        <div class="card bg-base-100 shadow-xl border border-base-200">
+            <div class="card-body">
+                <h2 class="card-title text-xl mb-4">Add Funds</h2>
+                <form id="add-funds-form" class="flex flex-col gap-4">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Amount (USD)</span>
+                        </label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            name="amount"
+                            placeholder="10.00"
+                            class="input input-bordered w-full"
+                            required
+                        />
                     </div>
-                    
-                    <div class="divider"></div>
-                    
-                    <div class="join">
-                        <input class="input input-bordered join-item" placeholder="Amount (USD)" id="amountInput" type="number" step="0.01"/>
-                        <button class="btn btn-secondary join-item" id="setBudgetBtn">Set Balance</button>
-                    </div>
+                    <button type="submit" class="btn btn-secondary w-full"
+                        >Deposite Funds</button
+                    >
+                </form>
+                <div
+                    id="status-msg"
+                    class="text-sm mt-2 text-center opacity-0 transition-opacity"
+                >
                 </div>
             </div>
-            
-            <!-- Instructions -->
-             <div class="card bg-base-100 shadow-xl">
-                <div class="card-body">
-                    <h2 class="card-title">Configuration</h2>
-                    <p>Point your clients to: <code class="bg-base-300 p-1 rounded">http://localhost:8080/v1</code></p>
-                    <p>API Key: <code>(Managed internally)</code></p>
-                </div>
-            </div>
-		</div>
+        </div>
+    </div>
 
-        <script>
-            const API_BASE = '/v1';
-            
-            async function fetchBalance() {
-                try {
-                    const res = await fetch(`${API_BASE}/stats/budget`);
-                    const data = await res.json();
-                    document.getElementById('balanceDisplay').innerText = `$${data.budget.toFixed(4)}`;
-                } catch (e) {
-                    console.error("Failed to fetch balance", e);
-                }
+    <script>
+        // Fetch budget on load
+        async function fetchBudget() {
+            try {
+                const res = await fetch("/v1/stats/budget");
+                if (!res.ok) throw new Error("Failed to fetch");
+                const data = await res.json();
+                const el = document.getElementById("budget-display");
+                if (el) el.innerText = data.budget.toFixed(4);
+            } catch (err) {
+                console.error(err);
+                const el = document.getElementById("budget-display");
+                if (el) el.innerText = "Error";
             }
+        }
 
-            document.getElementById('setBudgetBtn').addEventListener('click', async () => {
-                const amount = parseFloat(document.getElementById('amountInput').value);
-                if (isNaN(amount)) return;
-                
+        // Handle Add Funds
+        const form = document.getElementById(
+            "add-funds-form",
+        ) as HTMLFormElement;
+        const msg = document.getElementById("status-msg");
+
+        if (form) {
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
+                const amount = parseFloat(formData.get("amount") as string);
+
+                if (isNaN(amount) || amount <= 0) return;
+
+                // For simplicity, we just set the balance for now (dev mode mostly),
+                // but in a real app this would ADD to it.
+                // The current API is `SetBalance`. Ideally we should have `AddBalance` or read-then-write.
+                // Let's first read existing, then add.
                 try {
-                    await fetch(`${API_BASE}/stats/budget`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ amount })
+                    // 1. Get current
+                    const res = await fetch("/v1/stats/budget");
+                    const data = await res.json();
+                    const current = data.budget || 0;
+
+                    // 2. Set new
+                    const newBalance = current + amount;
+                    const updateRes = await fetch("/v1/stats/budget", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ amount: newBalance }),
                     });
-                    fetchBalance();
-                    document.getElementById('amountInput').value = '';
-                } catch (e) {
-                    alert("Failed to update budget");
+
+                    if (updateRes.ok) {
+                        fetchBudget(); // refresh display
+                        if (msg) {
+                            msg.innerText = `Successfully added $${amount}`;
+                            msg.classList.remove("opacity-0", "text-error");
+                            msg.classList.add("text-success");
+                            setTimeout(
+                                () => msg.classList.add("opacity-0"),
+                                3000,
+                            );
+                        }
+                        form.reset();
+                    } else {
+                        throw new Error("Update failed");
+                    }
+                } catch (err) {
+                    console.error(err);
+                    if (msg) {
+                        msg.innerText = "Failed to update funds";
+                        msg.classList.remove("opacity-0", "text-success");
+                        msg.classList.add("text-error");
+                    }
                 }
             });
+        }
 
-            // Init
-            fetchBalance();
-            setInterval(fetchBalance, 5000);
-        </script>
-	</body>
-</html>
+        fetchBudget();
+    </script>
+</Layout>

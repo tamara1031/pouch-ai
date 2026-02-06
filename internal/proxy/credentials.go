@@ -1,0 +1,67 @@
+package proxy
+
+import (
+	"database/sql"
+	"encoding/base64"
+	"fmt"
+
+	"pouch-ai/internal/security"
+)
+
+type CredentialsManager struct {
+	db *sql.DB
+}
+
+func NewCredentialsManager(db *sql.DB) *CredentialsManager {
+	return &CredentialsManager{db: db}
+}
+
+// GetAPIKey retrieves and decrypts the API key for a provider.
+func (cm *CredentialsManager) GetAPIKey(provider string, password string) (string, error) {
+	var encryptedKey, saltStr string
+	err := cm.db.QueryRow("SELECT encrypted_key, salt FROM credentials WHERE provider = ?", provider).Scan(&encryptedKey, &saltStr)
+	if err != nil {
+		return "", err
+	}
+
+	// For now, use a static password. In a real app, this should come from user input/env.
+	masterPassword := "pouch-default-insecure-master-password"
+
+	salt, err := base64Decode(saltStr)
+	if err != nil {
+		return "", fmt.Errorf("invalid salt: %w", err)
+	}
+
+	key := security.DeriveKey(masterPassword, salt)
+	return security.Decrypt(key, encryptedKey)
+}
+
+// SetAPIKey encrypts and stores the API key.
+func (cm *CredentialsManager) SetAPIKey(provider string, apiKey string) error {
+	masterPassword := "pouch-default-insecure-master-password"
+
+	salt, err := security.GenerateSalt()
+	if err != nil {
+		return err
+	}
+
+	key := security.DeriveKey(masterPassword, salt)
+	encrypted, err := security.Encrypt(key, apiKey)
+	if err != nil {
+		return err
+	}
+
+	saltStr := base64Encode(salt)
+
+	_, err = cm.db.Exec("INSERT OR REPLACE INTO credentials (provider, encrypted_key, salt) VALUES (?, ?, ?)",
+		provider, encrypted, saltStr)
+	return err
+}
+
+func base64Decode(s string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(s)
+}
+
+func base64Encode(b []byte) string {
+	return base64.StdEncoding.EncodeToString(b)
+}
