@@ -4,29 +4,27 @@ import Dashboard from "../components/Dashboard";
 import Modals from "../components/Modals";
 ---
 
-<Layout title="API Keys - Pouch AI">
-    <div class="max-w-5xl mx-auto py-16 px-6">
-        {/* Header - Static HTML */}
+<Layout title="API Keys — Pouch AI">
+    <div class="max-w-5xl mx-auto py-24 px-6">
+        {/* Header - Minimal & Modern */}
         <div
-            class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-8 mb-12"
+            class="flex flex-col md:flex-row md:items-end justify-between gap-12 mb-20 animate-in fade-in slide-in-from-bottom-6 duration-1000"
         >
-            <div class="space-y-2">
-                <div
-                    class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black uppercase tracking-widest text-primary mb-2"
-                >
-                    Fleet Management
-                </div>
-                <h1 class="text-4xl font-extrabold text-white tracking-tight">
-                    API Governance
+            <div class="space-y-4">
+                <h1 class="text-6xl font-black text-white tracking-tight">
+                    API Keys
                 </h1>
-                <p class="text-base-content/40 font-medium max-w-md">
-                    Provision, audit, and constraint-limit your application's
-                    access to external LLM providers.
+                <p
+                    class="text-white/30 font-medium text-lg max-w-sm leading-relaxed"
+                >
+                    Securely manage and monitor your application's access to
+                    external LLM providers.
                 </p>
             </div>
+
             <label
                 for="create-key-modal"
-                class="btn btn-primary rounded-2xl px-8 h-14 shadow-2xl shadow-primary/25 gap-3 group border-none transform hover:scale-[1.02] active:scale-95 transition-all"
+                class="btn btn-primary h-16 px-10 rounded-2xl border-none shadow-2xl shadow-primary/20 gap-4 group hover:scale-[1.02] active:scale-95 transition-all"
             >
                 <div
                     class="p-1 rounded-lg bg-white/20 group-hover:rotate-90 transition-transform duration-500"
@@ -45,8 +43,8 @@ import Modals from "../components/Modals";
                             d="M12 4v16m8-8H4"></path>
                     </svg>
                 </div>
-                <span class="font-bold uppercase tracking-widest text-xs"
-                    >Analyze & Provision</span
+                <span class="font-bold uppercase tracking-[0.2em] text-[10px]"
+                    >Generate API Key</span
                 >
             </label>
         </div>
