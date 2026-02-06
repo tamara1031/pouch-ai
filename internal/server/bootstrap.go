@@ -10,15 +10,12 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	"pouch-ai/internal/api/http/handler"
-	pouch_mw "pouch-ai/internal/api/http/middleware"
-	"pouch-ai/internal/app"
-	app_mw "pouch-ai/internal/app/middleware"
+	"pouch-ai/internal/api"
 	"pouch-ai/internal/database"
-	"pouch-ai/internal/domain/provider"
-	"pouch-ai/internal/infra/db"
-	"pouch-ai/internal/infra/provider/openai"
-	infra_proxy "pouch-ai/internal/infra/proxy"
+	"pouch-ai/internal/domain"
+	"pouch-ai/internal/infra"
+	"pouch-ai/internal/service"
+	service_mw "pouch-ai/internal/service/middleware"
 )
 
 type Server struct {
@@ -33,36 +30,36 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	}
 
 	// 2. Initialize Repositories and Infrastructure
-	keyRepo := db.NewSQLiteKeyRepository(database.DB)
+	keyRepo := infra.NewSQLiteKeyRepository(database.DB)
 
-	pricing, err := openai.NewPricing()
+	pricing, err := infra.NewOpenAIPricing()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load pricing: %w", err)
 	}
 
-	tokenCounter := openai.NewTiktokenCounter()
+	tokenCounter := infra.NewTiktokenCounter()
 
-	openaiProv := openai.NewOpenAIProvider(os.Getenv("OPENAI_API_KEY"), targetURL, pricing, tokenCounter)
+	openaiProv := infra.NewOpenAIProvider(os.Getenv("OPENAI_API_KEY"), targetURL, pricing, tokenCounter)
 
-	registry := provider.NewRegistry()
+	registry := domain.NewRegistry()
 	registry.Register(openaiProv)
 
 	// 3. Initialize Application Services
-	keyService := app.NewKeyService(keyRepo)
+	keyService := service.NewKeyService(keyRepo)
 
-	executionHandler := infra_proxy.NewExecutionHandler()
-	proxyService := app.NewProxyService(
+	executionHandler := infra.NewExecutionHandler()
+	proxyService := service.NewProxyService(
 		executionHandler,
-		app_mw.NewRateLimitMiddleware(),
-		app_mw.NewBudgetResetMiddleware(keyService),
-		app_mw.NewKeyValidationMiddleware(),
-		app_mw.NewUsageTrackingMiddleware(keyService),
-		app_mw.NewMockMiddleware(),
+		service_mw.NewRateLimitMiddleware(),               // Shut out request if rate limit is exceeded
+		service_mw.NewBudgetResetMiddleware(keyService),   // Reset budget if needed
+		service_mw.NewKeyValidationMiddleware(),           // check if key is expired
+		service_mw.NewUsageTrackingMiddleware(keyService), // add usage and check if budget will be exceeded
+		service_mw.NewMockMiddleware(),                    // Mock requests if needed
 	)
 
 	// 4. Initialize Handlers
-	keyHandler := handler.NewKeyHandler(keyService)
-	proxyHandler := handler.NewProxyHandler(proxyService, registry)
+	keyHandler := api.NewKeyHandler(keyService)
+	proxyHandler := api.NewProxyHandler(proxyService, registry)
 
 	// 5. Echo Setup
 	e := echo.New()
@@ -73,16 +70,16 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	e.Use(middleware.CORS())
 
 	// 7. Routes
-	api := e.Group("/v1")
+	apiGroup := e.Group("/v1")
 
 	// Proxy Route
-	api.POST("/chat/completions", proxyHandler.Proxy, pouch_mw.AuthMiddleware(keyService))
+	apiGroup.POST("/chat/completions", proxyHandler.Proxy, api.AuthMiddleware(keyService))
 
 	// Config Routes
-	api.GET("/config/app-keys", keyHandler.ListKeys)
-	api.POST("/config/app-keys", keyHandler.CreateKey)
-	api.PUT("/config/app-keys/:id", keyHandler.UpdateKey)
-	api.DELETE("/config/app-keys/:id", keyHandler.DeleteKey)
+	apiGroup.GET("/config/app-keys", keyHandler.ListKeys)
+	apiGroup.POST("/config/app-keys", keyHandler.CreateKey)
+	apiGroup.PUT("/config/app-keys/:id", keyHandler.UpdateKey)
+	apiGroup.DELETE("/config/app-keys/:id", keyHandler.DeleteKey)
 
 	// UI
 	e.GET("/*", echo.WrapHandler(http.FileServer(http.FS(assets))))
