@@ -1,6 +1,6 @@
 ---
 interface Props {
-	title: string;
+  title: string;
 }
 
 const { title } = Astro.props;
@@ -8,31 +8,37 @@ const { title } = Astro.props;
 
 <!doctype html>
 <html lang="en" data-theme="dark">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="description" content="Pouch AI - Financial Safety for LLMs" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="generator" content={Astro.generator} />
-		<title>{title}</title>
-	</head>
-	<body class="min-h-screen bg-base-300 text-base-content font-sans">
-        <div class="navbar bg-base-100 shadow-lg px-4 sm:px-8">
-            <div class="flex-1">
-              <a href="/" class="btn btn-ghost text-xl normal-case gap-2">
-                <span class="text-primary font-bold">Pouch</span>
-                <span class="font-light">AI</span>
-              </a>
-            </div>
-            <div class="flex-none">
-              <ul class="menu menu-horizontal px-1">
-                <li><a href="https://github.com/yamato/pouch-ai" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-              </ul>
-            </div>
-        </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="Pouch AI - Financial Safety for LLMs" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen bg-base-300 text-base-content font-sans">
+    <div class="navbar bg-base-100 shadow-lg px-4 sm:px-8">
+      <div class="flex-1">
+        <a href="/" class="btn btn-ghost text-xl normal-case gap-2">
+          <span class="text-primary font-bold">Pouch</span>
+          <span class="font-light">AI</span>
+        </a>
+      </div>
+      <div class="flex-none">
+        <ul class="menu menu-horizontal px-1">
+          <li><a href="/keys">App Keys</a></li>
+          <li>
+            <a
+              href="https://github.com/yamato/pouch-ai"
+              target="_blank"
+              rel="noopener noreferrer">GitHub</a>
+          </li>
+        </ul>
+      </div>
+    </div>
 
-        <main class="container mx-auto px-4 py-8 max-w-4xl">
-		    <slot />
-        </main>
-	</body>
+    <main class="container mx-auto px-4 py-8 max-w-4xl">
+      <slot />
+    </main>
+  </body>
 </html>

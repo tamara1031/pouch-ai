@@ -24,6 +24,9 @@ type Handler struct {
 	Pricing *Pricing
 	Target  *url.URL
 	creds   *CredentialsManager
+
+	// Optional callback to track usage (e.g. for app keys)
+	UsageCallback func(c echo.Context, cost float64)
 }
 
 func NewHandler(b *budget.Manager, t *token.Counter, p *Pricing, targetStr string, creds *CredentialsManager) (*Handler, error) {
@@ -182,6 +185,10 @@ func (h *Handler) Handle(c echo.Context) error {
 
 	log.Printf("Req: %s | max: $%.4f | actual: $%.4f | refund: $%.4f | duration: %v | out_tok: %d",
 		req.Model, maxCost, finalCost, refundAmount, time.Since(startTime), actualOutputTokens)
+
+	if h.UsageCallback != nil {
+		h.UsageCallback(c, finalCost)
+	}
 
 	return nil
 }

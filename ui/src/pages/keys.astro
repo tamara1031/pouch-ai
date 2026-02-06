@@ -1,0 +1,300 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="App Keys - Pouch AI">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">App Keys</h1>
+        <label for="create-key-modal" class="btn btn-primary"
+            >Generate New Key</label
+        >
+    </div>
+
+    <div class="overflow-x-auto bg-base-100 rounded-box shadow">
+        <table class="table w-full">
+            <thead>
+                <tr>
+                    <th>Name / Prefix</th>
+                    <th>Created</th>
+                    <th>Expires</th>
+                    <th>Budget Usage</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="keys-table-body">
+                <!-- Rows will be injected here -->
+                <tr>
+                    <td colspan="6" class="text-center py-4">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Create Key Modal -->
+    <input type="checkbox" id="create-key-modal" class="modal-toggle" />
+    <div class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg">Generate New App Key</h3>
+            <p class="py-4 text-sm opacity-75">
+                App keys allow your applications to access Pouch AI securely.
+            </p>
+
+            <form id="create-key-form" class="flex flex-col gap-4">
+                <div class="form-control">
+                    <label class="label"
+                        ><span class="label-text">App Name</span></label
+                    >
+                    <input
+                        type="text"
+                        name="name"
+                        placeholder="e.g. My Chat App"
+                        class="input input-bordered w-full"
+                        required
+                    />
+                </div>
+
+                <div class="form-control">
+                    <label class="label"
+                        ><span class="label-text">Expiration</span></label
+                    >
+                    <select
+                        name="expiration"
+                        class="select select-bordered w-full"
+                    >
+                        <option value="7">7 Days</option>
+                        <option value="30">30 Days</option>
+                        <option value="90" selected
+                            >90 Days (Recommended)</option
+                        >
+                        <option value="365">1 Year</option>
+                        <option value="0">Never</option>
+                    </select>
+                </div>
+
+                <div class="form-control">
+                    <label class="label"
+                        ><span class="label-text">Budget Limit (USD)</span
+                        ></label
+                    >
+                    <label class="input-group">
+                        <span>$</span>
+                        <input
+                            type="number"
+                            name="budget_limit"
+                            value="5.00"
+                            step="0.01"
+                            min="0"
+                            class="input input-bordered w-full"
+                        />
+                    </label>
+                    <label class="label"
+                        ><span class="label-text-alt"
+                            >Set 0 for unlimited. Default $5.00 to prevent
+                            accidents.</span
+                        ></label
+                    >
+                </div>
+
+                <div class="modal-action">
+                    <label
+                        for="create-key-modal"
+                        class="btn btn-ghost"
+                        id="close-modal-btn">Cancel</label
+                    >
+                    <button type="submit" class="btn btn-primary"
+                        >Generate</button
+                    >
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- New Key Display Modal -->
+    <input type="checkbox" id="new-key-display-modal" class="modal-toggle" />
+    <div class="modal">
+        <div class="modal-box relative">
+            <h3 class="font-bold text-lg text-success">Key Generated!</h3>
+            <p class="py-4">
+                Please copy your API key now. <br />
+                <span class="font-bold text-error"
+                    >It will not be shown again.</span
+                >
+            </p>
+            <div class="alert alert-info">
+                <code id="new-key-value" class="break-all font-mono"
+                    >pk-xxxxxxxx</code
+                >
+                <button class="btn btn-xs btn-ghost" onclick="copyKey()"
+                    >Copy</button
+                >
+            </div>
+            <div class="modal-action">
+                <label
+                    for="new-key-display-modal"
+                    class="btn"
+                    onclick="window.location.reload()">Done</label
+                >
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadKeys() {
+            const tbody = document.getElementById("keys-table-body");
+            if (!tbody) return;
+
+            try {
+                const res = await fetch("/v1/config/app-keys");
+                const keys = await res.json();
+
+                tbody.innerHTML = "";
+
+                if (keys.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-base-content/50 py-8">No keys found. Create one to get started.</td></tr>`;
+                    return;
+                }
+
+                keys.forEach((key: any) => {
+                    const created = new Date(
+                        key.created_at * 1000,
+                    ).toLocaleDateString();
+                    let expires = "Never";
+                    let isExpired = false;
+
+                    if (key.expires_at) {
+                        const expDate = new Date(key.expires_at * 1000);
+                        expires = expDate.toLocaleDateString();
+                        if (expDate < new Date()) isExpired = true;
+                    }
+
+                    let usageColor = "progress-success";
+                    let usagePercent = 0;
+                    if (key.budget_limit > 0) {
+                        usagePercent =
+                            (key.budget_usage / key.budget_limit) * 100;
+                        if (usagePercent > 80) usageColor = "progress-warning";
+                        if (usagePercent >= 100) usageColor = "progress-error";
+                    }
+
+                    const limitDisplay =
+                        key.budget_limit > 0
+                            ? `$${key.budget_limit.toFixed(2)}`
+                            : "∞";
+
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+            <td>
+              <div class="font-bold">${key.name}</div>
+              <div class="text-xs opacity-50 font-mono">${key.prefix}</div>
+            </td>
+            <td>${created}</td>
+            <td>
+              <div class="${isExpired ? "text-error font-bold" : ""}">${expires}</div>
+            </td>
+            <td>
+               <div class="flex flex-col gap-1 w-24">
+                 <span class="text-xs">$${key.budget_usage.toFixed(4)} / ${limitDisplay}</span>
+                 ${key.budget_limit > 0 ? `<progress class="progress ${usageColor} w-24" value="${usagePercent}" max="100"></progress>` : ""}
+               </div>
+            </td>
+            <td>
+              ${isExpired ? '<span class="badge badge-error gap-2">Expired</span>' : '<span class="badge badge-success gap-2">Active</span>'}
+            </td>
+            <td>
+              <button class="btn btn-error btn-xs" onclick="revokeKey(${key.id})">Revoke</button>
+            </td>
+          `;
+                    tbody.appendChild(row);
+                });
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-error">Failed to load keys</td></tr>`;
+            }
+        }
+
+        // Attach to window for onclick
+        (window as any).revokeKey = async (id: number) => {
+            if (
+                !confirm(
+                    "Are you sure you want to revoke this key? This action cannot be undone.",
+                )
+            )
+                return;
+            try {
+                const res = await fetch(`/v1/config/app-keys/${id}`, {
+                    method: "DELETE",
+                });
+                if (res.ok) {
+                    loadKeys();
+                } else {
+                    alert("Failed to revoke key");
+                }
+            } catch (err) {
+                alert("Error revoking key");
+            }
+        };
+
+        (window as any).copyKey = () => {
+            const el = document.getElementById("new-key-value");
+            if (el) {
+                navigator.clipboard.writeText(el.innerText);
+                alert("Copied directly to clipboard!");
+            }
+        };
+
+        // Handle Create
+        const createForm = document.getElementById(
+            "create-key-form",
+        ) as HTMLFormElement;
+        if (createForm) {
+            createForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const formData = new FormData(createForm);
+                const name = formData.get("name") as string;
+                const days = parseInt(formData.get("expiration") as string); // Changed to expiration
+                const limit = parseFloat(
+                    formData.get("budget_limit") as string,
+                );
+
+                let expires_at: number | null = null;
+                if (days > 0) {
+                    // Calculate seconds from now
+                    expires_at =
+                        Math.floor(Date.now() / 1000) + days * 24 * 60 * 60;
+                }
+
+                try {
+                    const res = await fetch("/v1/config/app-keys", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            name,
+                            expires_at,
+                            budget_limit: limit,
+                        }),
+                    });
+
+                    if (!res.ok) throw new Error("Failed to create");
+                    const data = await res.json();
+
+                    // Close create modal
+                    document.getElementById("close-modal-btn")?.click();
+                    createForm.reset();
+
+                    // Show new key modal
+                    const keyDisplay = document.getElementById("new-key-value");
+                    if (keyDisplay) keyDisplay.innerText = data.key;
+
+                    const displayModal = document.getElementById(
+                        "new-key-display-modal",
+                    ) as HTMLInputElement;
+                    if (displayModal) displayModal.checked = true;
+                } catch (err) {
+                    alert("Failed to create key");
+                }
+            });
+        }
+
+        loadKeys();
+    </script>
+</Layout>

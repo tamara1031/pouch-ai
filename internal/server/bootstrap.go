@@ -10,10 +10,12 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/time/rate"
 
+	"pouch-ai/internal/auth"
 	"pouch-ai/internal/budget"
 	"pouch-ai/internal/database"
 	"pouch-ai/internal/proxy"
 	"pouch-ai/internal/token"
+	"strings"
 )
 
 type Server struct {
@@ -31,6 +33,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	budg := budget.NewManager(database.DB)
 	tok := token.NewCounter()
 	creds := proxy.NewCredentialsManager(database.DB)
+	keyMgr := auth.NewKeyManager(database.DB)
 	pric, err := proxy.NewPricing()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load pricing: %w", err)
@@ -40,6 +43,15 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	prox, err := proxy.NewHandler(budg, tok, pric, targetURL, creds)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init proxy: %w", err)
+	}
+
+	prox.UsageCallback = func(c echo.Context, cost float64) {
+		keyID, ok := c.Get("app_key_id").(int64)
+		if ok && keyID > 0 {
+			if err := keyMgr.IncrementUsage(keyID, cost); err != nil {
+				fmt.Printf("Failed to update key usage: %v\n", err)
+			}
+		}
 	}
 
 	// 4. Echo Setup
@@ -67,7 +79,39 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	api := e.Group("/v1")
 
 	// OpenAI Chat Completions
-	api.POST("/chat/completions", prox.Handle)
+	// OpenAI Chat Completions
+	api.POST("/chat/completions", prox.Handle, func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			authHeader := c.Request().Header.Get("Authorization")
+			if authHeader == "" {
+				// No key provided
+				// Check if any keys exist in DB. If yes, require auth.
+				keys, _ := keyMgr.ListKeys()
+				if len(keys) > 0 {
+					return echo.NewHTTPError(http.StatusUnauthorized, "Missing API Key")
+				}
+				// If no keys exist, allow anonymous (first setup or personal use without keys)
+				return next(c)
+			}
+
+			if !strings.HasPrefix(authHeader, "Bearer ") {
+				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid Authorization header format")
+			}
+			key := strings.TrimPrefix(authHeader, "Bearer ")
+
+			info, err := keyMgr.VerifyKey(key)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid or expired API Key: "+err.Error())
+			}
+			if info == nil {
+				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid API Key")
+			}
+
+			// Store Key ID in context for UsageCallback
+			c.Set("app_key_id", info.ID)
+			return next(c)
+		}
+	})
 
 	// Admin / System Routes
 
@@ -96,7 +140,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 		return c.JSON(http.StatusOK, "updated")
 	})
 
-	// Config: API Keys
+	// Config: API Keys (Provider)
 	api.POST("/config/key", func(c echo.Context) error {
 		var req struct {
 			Provider string `json:"provider"`
@@ -113,6 +157,46 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to save key: %v", err))
 		}
 		return c.JSON(http.StatusOK, "key updated")
+	})
+
+	// Config: App Keys management
+	api.GET("/config/app-keys", func(c echo.Context) error {
+		keys, err := keyMgr.ListKeys()
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, keys)
+	})
+
+	api.POST("/config/app-keys", func(c echo.Context) error {
+		var req struct {
+			Name        string  `json:"name"`
+			ExpiresAt   *int64  `json:"expires_at"` // Nullable
+			BudgetLimit float64 `json:"budget_limit"`
+		}
+		if err := c.Bind(&req); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+		if req.Name == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "Name is required")
+		}
+
+		key, err := keyMgr.GenerateKey(req.Name, req.ExpiresAt, req.BudgetLimit)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, map[string]string{"key": key})
+	})
+
+	api.DELETE("/config/app-keys/:id", func(c echo.Context) error {
+		id := 0
+		if _, err := fmt.Sscanf(c.Param("id"), "%d", &id); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid ID")
+		}
+		if err := keyMgr.RevokeKey(id); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, "deleted")
 	})
 
 	// Serve UI embedded
