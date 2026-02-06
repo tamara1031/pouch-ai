@@ -114,7 +114,7 @@ func (h *Handler) Handle(c echo.Context) error {
 		req.Host = h.Target.Host
 
 		// Injection: Get Key
-		key, err := h.creds.GetAPIKey("openai", "") // Using default inside
+		key, err := h.creds.GetAPIKey("openai")
 		if err == nil && key != "" {
 			req.Header.Set("Authorization", "Bearer "+key)
 		} else {

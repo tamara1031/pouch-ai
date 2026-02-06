@@ -31,7 +31,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 
 	// 2. Dependencies
 	tok := token.NewCounter()
-	creds := proxy.NewCredentialsManager(database.DB)
+	creds := proxy.NewCredentialsManager()
 	keyMgr := auth.NewKeyManager(database.DB)
 	pric, err := proxy.NewPricing()
 	if err != nil {
@@ -89,25 +89,6 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	api.POST("/chat/completions", prox.Handle, AuthMiddleware(keyMgr))
 
 	// Admin / System Routes
-
-	// Config: API Keys (Provider)
-	api.POST("/config/key", func(c echo.Context) error {
-		var req struct {
-			Provider string `json:"provider"`
-			Key      string `json:"key"`
-		}
-		if err := c.Bind(&req); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-		}
-		if req.Provider == "" {
-			req.Provider = "openai" // Default
-		}
-
-		if err := creds.SetAPIKey(req.Provider, req.Key); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to save key: %v", err))
-		}
-		return c.JSON(http.StatusOK, "key updated")
-	})
 
 	// Config: App Keys management
 	api.GET("/config/app-keys", func(c echo.Context) error {

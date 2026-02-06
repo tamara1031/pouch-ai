@@ -40,13 +40,6 @@ func InitDB(dataDir string) error {
 func migrate(db *sql.DB) error {
 	// Simple schema migration
 	schema := `
-	CREATE TABLE IF NOT EXISTS credentials (
-		provider TEXT PRIMARY KEY,
-		encrypted_key TEXT NOT NULL,
-		salt TEXT NOT NULL
-	);
-
-
 	CREATE TABLE IF NOT EXISTS app_keys (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
