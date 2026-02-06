@@ -48,7 +48,27 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 		registry.Register(openaiProv)
 	}
 
-	// TODO: Add more providers (Anthropic, Gemini, etc.) here
+	// Register Anthropic Provider
+	anthropicKey := os.Getenv("ANTHROPIC_API_KEY")
+	if anthropicKey != "" {
+		aPricing, err := infra.NewAnthropicPricing()
+		if err != nil {
+			return nil, fmt.Errorf("failed to load anthropic pricing: %w", err)
+		}
+		anthropicProv := infra.NewAnthropicProvider(anthropicKey, aPricing, tokenCounter)
+		registry.Register(anthropicProv)
+	}
+
+	// Register Gemini Provider
+	geminiKey := os.Getenv("GEMINI_API_KEY")
+	if geminiKey != "" {
+		gPricing, err := infra.NewGeminiPricing()
+		if err != nil {
+			return nil, fmt.Errorf("failed to load gemini pricing: %w", err)
+		}
+		geminiProv := infra.NewGeminiProvider(geminiKey, gPricing, tokenCounter)
+		registry.Register(geminiProv)
+	}
 
 	// 3. Initialize Application Services
 	keyService := service.NewKeyService(keyRepo, registry)

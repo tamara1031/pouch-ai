@@ -17,6 +17,15 @@ func NewExecutionHandler() *ExecutionHandler {
 	}
 }
 
+type readCloserWrapper struct {
+	io.Reader
+	closer io.Closer
+}
+
+func (r *readCloserWrapper) Close() error {
+	return r.closer.Close()
+}
+
 func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error) {
 	// 1. Prepare Request
 	httpReq, err := req.Provider.PrepareHTTPRequest(req.Context, req.Model, req.RawBody)
@@ -31,7 +40,6 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 	}
 
 	// 3. For non-streaming, we still need to read it to count tokens reliably if the provider needs the full body.
-	// But let's try to be consistent.
 	if !req.IsStream {
 		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
@@ -49,32 +57,54 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 		}
 		outputCost := float64(outputTokens) / 1000.0 * pricing.Output
 
+		// Transform Response
+		transformedReader, err := req.Provider.TransformResponse(bytes.NewBuffer(body), false)
+		if err != nil {
+			return nil, err
+		}
+
+		// If transformedReader is a ReadCloser, use it, otherwise wrap it
+		var bodyReadCloser io.ReadCloser
+		if rc, ok := transformedReader.(io.ReadCloser); ok {
+			bodyReadCloser = rc
+		} else {
+			bodyReadCloser = io.NopCloser(transformedReader)
+		}
+
 		return &domain.Response{
 			StatusCode:   resp.StatusCode,
 			Header:       resp.Header,
-			Body:         io.NopCloser(bytes.NewBuffer(body)),
+			Body:         bodyReadCloser,
 			PromptTokens: inputUsage.InputTokens,
 			OutputTokens: outputTokens,
 			TotalCost:    inputCost + outputCost,
 		}, nil
 	}
 
-	// 4. For streaming, we return the body directly but wrapped in a CountingReader.
+	// 4. For streaming
 	inputUsage, _ := req.Provider.EstimateUsage(req.Model, req.RawBody)
 	inputCost := 0.0
 	if inputUsage != nil {
 		inputCost = inputUsage.TotalCost
 	}
 
-	// We wrap the body to count tokens and update usage when it's closed.
-	// For now, we'll just return the body but in a real scenario we'd use a TeeReader.
-	// Since we already have the provider's logic, we can use it.
+	// Transform Response
+	transformedReader, err := req.Provider.TransformResponse(resp.Body, true)
+	if err != nil {
+		resp.Body.Close()
+		return nil, err
+	}
 
-	// Create a wrapper that will update the database on Close()
+	// Wrap the transformed reader to ensure the original response body is closed
+	wrappedBody := &readCloserWrapper{
+		Reader: transformedReader,
+		closer: resp.Body,
+	}
+
 	return &domain.Response{
 		StatusCode:   resp.StatusCode,
 		Header:       resp.Header,
-		Body:         resp.Body, // TODO: Wrap in CountingReader
+		Body:         wrappedBody, // TODO: Wrap in CountingReader
 		PromptTokens: inputUsage.InputTokens,
 		TotalCost:    inputCost,
 	}, nil

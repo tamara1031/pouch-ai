@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -28,6 +29,9 @@ type Provider interface {
 	GetPricing(model Model) (Pricing, error)
 	CountTokens(model Model, text string) (int, error)
 	PrepareHTTPRequest(ctx context.Context, model Model, body []byte) (*http.Request, error)
+
+	// TransformResponse converts the provider's response body into an OpenAI-compatible format
+	TransformResponse(body io.Reader, isStream bool) (io.Reader, error)
 
 	// DDD: The provider is responsible for knowing how to estimate its own cost
 	EstimateUsage(model Model, requestBody []byte) (*Usage, error)

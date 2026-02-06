@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"pouch-ai/internal/domain"
 	"strings"
@@ -65,6 +66,10 @@ func (p *OpenAIProvider) PrepareHTTPRequest(ctx context.Context, model domain.Mo
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+p.apiKey)
 	return req, nil
+}
+
+func (p *OpenAIProvider) TransformResponse(body io.Reader, isStream bool) (io.Reader, error) {
+	return body, nil
 }
 
 func (p *OpenAIProvider) EstimateUsage(model domain.Model, body []byte) (*domain.Usage, error) {
