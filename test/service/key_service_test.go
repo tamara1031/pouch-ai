@@ -1,8 +1,9 @@
-package service
+package service_test
 
 import (
 	"context"
 	"pouch-ai/internal/domain"
+	"pouch-ai/internal/service"
 	"testing"
 )
 
@@ -36,7 +37,7 @@ func (m *mockRegistry) Get(name string) (domain.Provider, error) {
 func TestKeyService_CreateKey(t *testing.T) {
 	repo := &mockRepo{keys: make(map[domain.ID]*domain.Key)}
 	reg := &mockRegistry{}
-	svc := NewKeyService(repo, reg)
+	svc := service.NewKeyService(repo, reg)
 
 	raw, key, err := svc.CreateKey(context.Background(), "test-key", "openai", nil, 10.0, "monthly", false, "", 10, "minute")
 	if err != nil {
@@ -54,7 +55,7 @@ func TestKeyService_CreateKey(t *testing.T) {
 func TestKeyService_VerifyKey(t *testing.T) {
 	repo := &mockRepo{keys: make(map[domain.ID]*domain.Key)}
 	reg := &mockRegistry{}
-	svc := NewKeyService(repo, reg)
+	svc := service.NewKeyService(repo, reg)
 
 	raw, _, _ := svc.CreateKey(context.Background(), "test-key", "openai", nil, 10.0, "monthly", false, "", 10, "minute")
 

@@ -1,7 +1,8 @@
-package infra
+package infra_test
 
 import (
 	"pouch-ai/internal/domain"
+	"pouch-ai/internal/infra"
 	"testing"
 )
 
@@ -12,7 +13,7 @@ func (m *mockCounter) Count(model string, text string) (int, error) {
 }
 
 func TestOpenAIProvider_ParseRequest(t *testing.T) {
-	p := NewOpenAIProvider("test-key", "", nil, &mockCounter{})
+	p := infra.NewOpenAIProvider("test-key", "", nil, &mockCounter{})
 
 	reqBody := `{"model": "gpt-4", "stream": true}`
 	model, isStream, err := p.ParseRequest([]byte(reqBody))
@@ -29,7 +30,7 @@ func TestOpenAIProvider_ParseRequest(t *testing.T) {
 }
 
 func TestOpenAIProvider_ParseOutputUsage_NonStream(t *testing.T) {
-	p := NewOpenAIProvider("test-key", "", nil, &mockCounter{})
+	p := infra.NewOpenAIProvider("test-key", "", nil, &mockCounter{})
 
 	respBody := `{"usage": {"completion_tokens": 42}}`
 	tokens, err := p.ParseOutputUsage(domain.Model("gpt-4"), []byte(respBody), false)
