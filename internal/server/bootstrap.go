@@ -102,11 +102,13 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	api.POST("/config/app-keys", func(c echo.Context) error {
 		var req struct {
 			Name         string  `json:"name"`
-			ExpiresAt    *int64  `json:"expires_at"` // Nullable
+			ExpiresAt    *int64  `json:"expires_at"`
 			BudgetLimit  float64 `json:"budget_limit"`
 			BudgetPeriod string  `json:"budget_period"`
 			IsMock       bool    `json:"is_mock"`
 			MockConfig   string  `json:"mock_config"`
+			RateLimit    int     `json:"rate_limit"`
+			RatePeriod   string  `json:"rate_period"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -115,7 +117,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 			return echo.NewHTTPError(http.StatusBadRequest, "Name is required")
 		}
 
-		key, err := keyMgr.GenerateKey(req.Name, req.ExpiresAt, req.BudgetLimit, req.BudgetPeriod, req.IsMock, req.MockConfig)
+		key, err := keyMgr.GenerateKey(req.Name, req.ExpiresAt, req.BudgetLimit, req.BudgetPeriod, req.IsMock, req.MockConfig, req.RateLimit, req.RatePeriod)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
@@ -132,6 +134,8 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 			BudgetLimit float64 `json:"budget_limit"`
 			IsMock      bool    `json:"is_mock"`
 			MockConfig  string  `json:"mock_config"`
+			RateLimit   int     `json:"rate_limit"`
+			RatePeriod  string  `json:"rate_period"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -140,7 +144,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 			return echo.NewHTTPError(http.StatusBadRequest, "Name is required")
 		}
 
-		if err := keyMgr.UpdateKey(id, req.Name, req.BudgetLimit, req.IsMock, req.MockConfig); err != nil {
+		if err := keyMgr.UpdateKey(id, req.Name, req.BudgetLimit, req.IsMock, req.MockConfig, req.RateLimit, req.RatePeriod); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
 		return c.JSON(http.StatusOK, "updated")

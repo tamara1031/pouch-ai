@@ -52,6 +52,8 @@ func migrate(db *sql.DB) error {
 		last_reset_at INTEGER,
 		is_mock BOOLEAN DEFAULT 0,
 		mock_config TEXT,
+		rate_limit INTEGER DEFAULT 10,
+		rate_period TEXT DEFAULT 'minute',
 		created_at INTEGER NOT NULL
 	);
 	`
@@ -60,5 +62,10 @@ func migrate(db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
+
+	// Add columns if they don't exist (for existing DBs)
+	db.Exec("ALTER TABLE app_keys ADD COLUMN rate_limit INTEGER DEFAULT 10")
+	db.Exec("ALTER TABLE app_keys ADD COLUMN rate_period TEXT DEFAULT 'minute'")
+
 	return nil
 }

@@ -2,27 +2,26 @@
 import Layout from "../layouts/Layout.astro";
 ---
 
-<Layout title="App Keys - Pouch AI">
-    <div class="max-w-7xl mx-auto py-10 px-6">
-        <div class="flex justify-between items-center mb-8">
+<Layout title="API Keys - Pouch AI">
+    <div class="max-w-5xl mx-auto py-12 px-6">
+        <!-- Header -->
+        <div
+            class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6 mb-10"
+        >
             <div>
-                <h1
-                    class="text-4xl font-extrabold text-base-content tracking-tight"
-                >
-                    App Keys
-                </h1>
-                <p class="text-base-content/60 mt-2 text-lg">
-                    Manage API access for your applications.
+                <h1 class="text-3xl font-bold text-base-content">API Keys</h1>
+                <p class="text-base-content/50 mt-2">
+                    Create and manage API keys for your applications.
                 </p>
             </div>
             <label
                 for="create-key-modal"
-                class="btn btn-primary btn-lg shadow-lg gap-2"
+                class="btn btn-primary shadow-lg shadow-primary/20 gap-2 group"
                 onclick="resetCreateForm()"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-6 w-6"
+                    class="h-5 w-5 transition-transform group-hover:rotate-90"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -32,24 +31,31 @@ import Layout from "../layouts/Layout.astro";
                         stroke-width="2"
                         d="M12 4v16m8-8H4"></path></svg
                 >
-                Generate Key
+                Create Key
             </label>
         </div>
 
-        <!-- Key List (Loading State Initial) -->
-        <div id="keys-loading" class="flex justify-center py-20">
+        <!-- Loading State -->
+        <div
+            id="keys-loading"
+            class="flex flex-col items-center justify-center py-24"
+        >
             <span class="loading loading-spinner loading-lg text-primary"
             ></span>
+            <p class="text-base-content/50 mt-4 text-sm">Loading keys...</p>
         </div>
 
+        <!-- Empty State -->
         <div
             id="keys-empty"
-            class="hidden flex flex-col items-center justify-center py-24 bg-base-100 rounded-3xl border border-base-200 shadow-sm text-center"
+            class="hidden flex flex-col items-center justify-center py-20 bg-base-100/30 backdrop-blur-sm rounded-2xl border border-base-content/5 text-center"
         >
-            <div class="bg-primary/10 p-4 rounded-full mb-4">
+            <div
+                class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center mb-6"
+            >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-12 w-12 text-primary"
+                    class="h-8 w-8 text-primary"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -61,42 +67,63 @@ import Layout from "../layouts/Layout.astro";
                     ></path></svg
                 >
             </div>
-            <h3 class="text-2xl font-bold mb-2 text-base-content">
-                No Keys Found
+            <h3 class="text-xl font-semibold mb-2 text-base-content">
+                No API Keys Yet
             </h3>
-            <p class="text-base-content/60 max-w-md mx-auto mb-8">
-                Get started by generating your first API key to secure and
-                manage access to your LLM proxy.
+            <p class="text-base-content/50 max-w-sm mx-auto mb-8 text-sm">
+                Create your first API key to start managing access and budgets
+                for your AI applications.
             </p>
             <label
                 for="create-key-modal"
-                class="btn btn-outline btn-primary"
-                onclick="resetCreateForm()">Generate Key</label
+                class="btn btn-primary btn-sm gap-2"
+                onclick="resetCreateForm()"
             >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    ><path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 4v16m8-8H4"></path></svg
+                >
+                Create Your First Key
+            </label>
         </div>
 
-        <div id="keys-grid" class="hidden grid grid-cols-1 gap-6">
+        <!-- Keys Grid -->
+        <div id="keys-grid" class="hidden flex flex-col gap-4">
             <!-- Cards injected via JS -->
         </div>
     </div>
 
     <!-- Create Key Modal -->
     <input type="checkbox" id="create-key-modal" class="modal-toggle" />
-    <div class="modal backdrop-blur-sm">
+    <div class="modal backdrop-blur-md">
         <div
-            class="modal-box w-11/12 max-w-4xl p-0 overflow-hidden bg-base-100 rounded-2xl shadow-2xl"
+            class="modal-box w-11/12 max-w-3xl p-0 overflow-hidden bg-base-100/95 backdrop-blur-xl border border-base-content/5 rounded-2xl shadow-2xl"
         >
             <div
-                class="bg-base-200/50 p-6 border-b border-base-200 flex justify-between items-center"
+                class="p-6 border-b border-base-content/5 flex justify-between items-center"
             >
-                <h3 class="font-bold text-2xl">Generate New Key</h3>
+                <div>
+                    <h3 class="font-bold text-xl">Create API Key</h3>
+                    <p class="text-sm text-base-content/50 mt-1">
+                        Configure access and budget limits
+                    </p>
+                </div>
                 <label
                     for="create-key-modal"
-                    class="btn btn-sm btn-circle btn-ghost">✕</label
+                    class="btn btn-sm btn-circle btn-ghost text-base-content/50 hover:text-base-content"
+                    >✕</label
                 >
             </div>
 
-            <form id="create-key-form" class="p-8 flex flex-col gap-6">
+            <form id="create-key-form" class="p-6 flex flex-col gap-6">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- Left Column: Config -->
                     <div class="flex flex-col gap-5">
@@ -236,6 +263,41 @@ import Layout from "../layouts/Layout.astro";
                                 ></label
                             >
                         </div>
+
+                        <!-- Rate Limiting -->
+                        <div class="form-control">
+                            <label class="label"
+                                ><span class="label-text font-bold"
+                                    >🚦 Rate Limit</span
+                                ></label
+                            >
+                            <div class="flex gap-2">
+                                <input
+                                    type="number"
+                                    name="rate_limit"
+                                    value="10"
+                                    min="0"
+                                    max="1000"
+                                    class="input input-bordered flex-1 font-mono bg-base-200/30"
+                                />
+                                <select
+                                    name="rate_period"
+                                    class="select select-bordered bg-base-200/30"
+                                >
+                                    <option value="minute" selected
+                                        >/ minute</option
+                                    >
+                                    <option value="second">/ second</option>
+                                    <option value="none">Unlimited</option>
+                                </select>
+                            </div>
+                            <label class="label"
+                                ><span class="label-text-alt"
+                                    >Default: 10/min (conservative). 0 or
+                                    "Unlimited" = no limit.</span
+                                ></label
+                            >
+                        </div>
                     </div>
 
                     <!-- Right Column: Type & Mock -->
@@ -347,6 +409,31 @@ import Layout from "../layouts/Layout.astro";
                             min="0"
                             class="input input-bordered w-full pl-8 font-mono"
                         />
+                    </div>
+                </div>
+
+                <!-- Rate Limiting -->
+                <div class="form-control">
+                    <label class="label"
+                        ><span class="label-text font-bold">🚦 Rate Limit</span
+                        ></label
+                    >
+                    <div class="flex gap-2">
+                        <input
+                            type="number"
+                            id="edit-key-rate-limit"
+                            min="0"
+                            max="1000"
+                            class="input input-bordered flex-1 font-mono"
+                        />
+                        <select
+                            id="edit-key-rate-period"
+                            class="select select-bordered"
+                        >
+                            <option value="minute">/ minute</option>
+                            <option value="second">/ second</option>
+                            <option value="none">Unlimited</option>
+                        </select>
                     </div>
                 </div>
 
@@ -497,79 +584,6 @@ import Layout from "../layouts/Layout.astro";
             (window as any).toggleModeInputs();
         };
 
-        // --- Settings Logic ---
-        async function loadSettings() {
-            try {
-                const res = await fetch("/v1/config/settings", {
-                    cache: "no-store",
-                });
-                const data = await res.json();
-
-                const statusEl = document.getElementById("api-key-status");
-                if (statusEl) {
-                    statusEl.textContent = data.api_key_set
-                        ? "✓ API Key is configured"
-                        : "⚠ No API Key set";
-                    statusEl.classList.toggle("text-success", data.api_key_set);
-                    statusEl.classList.toggle(
-                        "text-warning",
-                        !data.api_key_set,
-                    );
-                }
-
-                const throttleEl = document.getElementById(
-                    "settings-throttle",
-                ) as HTMLInputElement;
-                if (throttleEl) throttleEl.value = data.throttle_rate || 100;
-            } catch (e) {
-                console.error("Failed to load settings", e);
-            }
-        }
-
-        (window as any).saveApiKey = async () => {
-            const input = document.getElementById(
-                "settings-api-key",
-            ) as HTMLInputElement;
-            const key = input.value.trim();
-            if (!key) {
-                alert("Please enter an API key");
-                return;
-            }
-
-            const res = await fetch("/v1/config/key", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ provider: "openai", key }),
-            });
-
-            if (res.ok) {
-                input.value = "";
-                alert("API Key saved successfully!");
-                loadSettings();
-            } else {
-                alert("Failed to save API Key");
-            }
-        };
-
-        (window as any).saveThrottle = async () => {
-            const input = document.getElementById(
-                "settings-throttle",
-            ) as HTMLInputElement;
-            const rate = parseInt(input.value) || 100;
-
-            const res = await fetch("/v1/config/settings", {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ throttle_rate: rate }),
-            });
-
-            if (res.ok) {
-                alert("Throttle rate saved! Restart server to apply.");
-            } else {
-                alert("Failed to save throttle rate");
-            }
-        };
-
         // --- Data Logic ---
         let currentKeys: any[] = [];
 
@@ -602,7 +616,7 @@ import Layout from "../layouts/Layout.astro";
                     let expiresText = "Never";
                     let isExpired = false;
                     let modeBadge = "";
-                    let statusBadge = `<span class="badge badge-success badge-sm gap-1 pl-1 pr-2 py-3"><div class="w-2 h-2 rounded-full bg-white"></div>Active</span>`;
+                    let statusBadge = `<span class="badge badge-success badge-sm gap-1 pl-1.5 pr-2.5 py-2.5 font-medium"><div class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>Active</span>`;
 
                     // Expiration Logic
                     if (key.expires_at) {
@@ -610,78 +624,93 @@ import Layout from "../layouts/Layout.astro";
                         expiresText = expDate.toLocaleDateString();
                         if (expDate < new Date()) {
                             isExpired = true;
-                            statusBadge = `<span class="badge badge-error badge-sm gap-1 py-3">Expired</span>`;
+                            statusBadge = `<span class="badge badge-error badge-sm py-2.5 font-medium">Expired</span>`;
                         }
                     }
 
                     // Mode Badge
                     if (key.budget_period && key.budget_period !== "none") {
-                        modeBadge = `<span class="badge badge-outline badge-secondary badge-sm capitalize">${key.budget_period} Sub</span>`;
+                        modeBadge = `<span class="badge badge-secondary/20 text-secondary badge-sm capitalize font-medium">${key.budget_period}</span>`;
                     } else {
-                        modeBadge = `<span class="badge badge-outline badge-primary badge-sm">Prepaid</span>`;
+                        modeBadge = `<span class="badge badge-primary/20 text-primary badge-sm font-medium">Prepaid</span>`;
                     }
 
                     // Mock Badge
                     if (key.is_mock) {
-                        statusBadge = `<span class="badge badge-info badge-sm gap-1 py-3 font-bold">MOCK MODE</span>`;
+                        statusBadge = `<span class="badge badge-info badge-sm py-2.5 font-bold">MOCK</span>`;
+                    }
+
+                    // Rate limit display
+                    let rateLimitText = "Unlimited";
+                    if (key.rate_period !== "none" && key.rate_limit > 0) {
+                        rateLimitText = `${key.rate_limit}/${key.rate_period === "second" ? "sec" : "min"}`;
                     }
 
                     // Budget Logic
                     const limit = key.budget_limit;
                     const usage = key.budget_usage;
                     let usagePercent = 0;
-                    let barColor = "progress-primary";
+                    let barColor = "bg-primary";
 
                     if (limit > 0) {
                         usagePercent = Math.min((usage / limit) * 100, 100);
-                        if (usagePercent > 80) barColor = "progress-warning";
+                        if (usagePercent > 80) barColor = "bg-warning";
                         if (usagePercent >= 100) {
-                            barColor = "progress-error";
+                            barColor = "bg-error";
                             if (!key.is_mock)
-                                statusBadge = `<span class="badge badge-error badge-sm gap-1 py-3">Depleted</span>`;
+                                statusBadge = `<span class="badge badge-error badge-sm py-2.5 font-medium">Depleted</span>`;
                         }
                     }
 
                     // Render Card
                     const card = document.createElement("div");
                     card.className =
-                        "card bg-base-100 shadow-sm border border-base-200 hover:shadow-md transition-shadow group";
+                        "card bg-base-100/50 backdrop-blur-sm border border-base-content/5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group";
                     card.innerHTML = `
             <div class="card-body p-6">
-               <div class="flex justify-between items-start mb-2">
-                   <div>
-                       <div class="flex items-center gap-2 mb-1">
-                           <h2 class="card-title text-xl font-bold">${key.name}</h2>
+               <div class="flex justify-between items-start">
+                   <div class="flex-1">
+                       <div class="flex items-center gap-3 mb-2">
+                           <h2 class="text-lg font-bold text-base-content">${key.name}</h2>
                            ${statusBadge}
                        </div>
-                       <p class="font-mono text-xs opacity-50 bg-base-200 inline-block px-2 py-1 rounded">${key.prefix}</p>
+                       <code class="text-xs text-base-content/40 bg-base-content/5 px-2 py-1 rounded font-mono">${key.prefix}</code>
                    </div>
-                   <div class="flex flex-col items-end gap-1">
+                   <div class="flex flex-col items-end gap-2">
                        ${modeBadge}
-                       <span class="text-xs opacity-50">Created ${new Date(key.created_at * 1000).toLocaleDateString()}</span>
                    </div>
                </div>
                
-               <div class="divider my-2"></div>
-               
-               <div class="grid grid-cols-2 gap-4 text-sm mt-2">
+               <div class="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-base-content/5">
                    <div>
-                       <div class="opacity-60 mb-1 flex justify-between">
-                           <span>Budget Usage</span>
-                           <span class="font-bold text-base-content">$${usage.toFixed(4)} / ${limit > 0 ? "$" + limit.toFixed(2) : "∞"}</span>
+                       <div class="text-xs text-base-content/50 mb-1">Budget</div>
+                       <div class="font-mono font-medium text-sm">$${usage.toFixed(2)} <span class="text-base-content/40">/ ${limit > 0 ? "$" + limit.toFixed(0) : "∞"}</span></div>
+                       <div class="w-full h-1.5 bg-base-content/10 rounded-full mt-2 overflow-hidden">
+                           <div class="${barColor} h-full rounded-full transition-all" style="width: ${usagePercent}%"></div>
                        </div>
-                       <progress class="progress ${barColor} w-full h-2 bg-base-200" value="${usagePercent}" max="100"></progress>
-                       ${key.budget_period && key.budget_period !== "none" ? `<div class="text-xs opacity-50 mt-1">Resets ${key.budget_period}</div>` : ""}
                    </div>
-                   <div class="text-right flex flex-col justify-center">
-                       <span class="opacity-60 block">Key Expiration</span>
-                       <span class="font-medium ${isExpired ? "text-error" : ""}">${expiresText}</span>
+                   <div>
+                       <div class="text-xs text-base-content/50 mb-1">Rate Limit</div>
+                       <div class="font-mono font-medium text-sm">${rateLimitText}</div>
+                   </div>
+                   <div class="text-right">
+                       <div class="text-xs text-base-content/50 mb-1">Expires</div>
+                       <div class="font-medium text-sm ${isExpired ? "text-error" : ""}">${expiresText}</div>
                    </div>
                </div>
 
-               <div class="card-actions justify-end mt-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                   <button class="btn btn-sm btn-ghost" onclick="openEdit(${key.id})">Edit</button>
-                   <button class="btn btn-sm btn-outline btn-error" onclick="revokeKey(${key.id})">Revoke</button>
+               <div class="flex justify-between items-center mt-6 pt-4 border-t border-base-content/5">
+                   <span class="text-xs text-base-content/40">Created ${new Date(key.created_at * 1000).toLocaleDateString()}</span>
+                   <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <button class="btn btn-sm btn-ghost text-base-content/60 hover:text-base-content" onclick="openEdit(${key.id})">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                           Edit
+                       </button>
+                       <button class="btn btn-sm btn-ghost text-error/60 hover:text-error hover:bg-error/10" onclick="revokeKey(${key.id})">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                           Revoke
+                       </button>
+                   </div>
                </div>
             </div>
           `;
@@ -724,6 +753,16 @@ import Layout from "../layouts/Layout.astro";
                     "edit-key-mock-config",
                 ) as HTMLTextAreaElement
             ).value = key.mock_config || '{"choices":[]}';
+            (
+                document.getElementById(
+                    "edit-key-rate-limit",
+                ) as HTMLInputElement
+            ).value = (key.rate_limit || 10).toString();
+            (
+                document.getElementById(
+                    "edit-key-rate-period",
+                ) as HTMLSelectElement
+            ).value = key.rate_period || "minute";
 
             (window as any).toggleEditMock();
 
@@ -740,7 +779,7 @@ import Layout from "../layouts/Layout.astro";
 
             const mode = fd.get("mode_type");
             const days = parseInt(fd.get("expiration") as string);
-            let expires_at = null;
+            let expires_at: number | null = null;
             let period = "none";
 
             if (mode === "prepaid") {
@@ -759,6 +798,8 @@ import Layout from "../layouts/Layout.astro";
                     document.getElementById("mock-toggle") as HTMLInputElement
                 ).checked,
                 mock_config: fd.get("mock_config"),
+                rate_limit: parseInt(fd.get("rate_limit") as string) || 10,
+                rate_period: fd.get("rate_period") || "minute",
             };
 
             const res = await fetch("/v1/config/app-keys", {
@@ -816,6 +857,20 @@ import Layout from "../layouts/Layout.astro";
                         "edit-key-mock-config",
                     ) as HTMLTextAreaElement
                 ).value,
+                rate_limit:
+                    parseInt(
+                        (
+                            document.getElementById(
+                                "edit-key-rate-limit",
+                            ) as HTMLInputElement
+                        ).value,
+                    ) || 10,
+                rate_period:
+                    (
+                        document.getElementById(
+                            "edit-key-rate-period",
+                        ) as HTMLSelectElement
+                    ).value || "minute",
             };
 
             const res = await fetch(`/v1/config/app-keys/${id}`, {

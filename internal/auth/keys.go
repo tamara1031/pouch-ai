@@ -17,12 +17,14 @@ type KeyInfo struct {
 	ID           int64   `json:"id"`
 	Name         string  `json:"name"`
 	Prefix       string  `json:"prefix"`
-	ExpiresAt    *int64  `json:"expires_at"` // Unix timestamp
+	ExpiresAt    *int64  `json:"expires_at"`
 	BudgetLimit  float64 `json:"budget_limit"`
 	BudgetUsage  float64 `json:"budget_usage"`
-	BudgetPeriod string  `json:"budget_period"` // "monthly", "weekly", "none"
+	BudgetPeriod string  `json:"budget_period"`
 	IsMock       bool    `json:"is_mock"`
-	MockConfig   string  `json:"mock_config"` // JSON string
+	MockConfig   string  `json:"mock_config"`
+	RateLimit    int     `json:"rate_limit"`  // requests per period (0 = unlimited)
+	RatePeriod   string  `json:"rate_period"` // "second", "minute", "none"
 	CreatedAt    int64   `json:"created_at"`
 }
 
@@ -31,7 +33,7 @@ func NewKeyManager(db *sql.DB) *KeyManager {
 }
 
 // GenerateKey creates a new API key.
-func (km *KeyManager) GenerateKey(name string, expiresAt *int64, budgetLimit float64, period string, isMock bool, mockConfig string) (string, error) {
+func (km *KeyManager) GenerateKey(name string, expiresAt *int64, budgetLimit float64, period string, isMock bool, mockConfig string, rateLimit int, ratePeriod string) (string, error) {
 	// Generate random key
 	bytes := make([]byte, 24)
 	if _, err := rand.Read(bytes); err != nil {
@@ -47,10 +49,18 @@ func (km *KeyManager) GenerateKey(name string, expiresAt *int64, budgetLimit flo
 	prefix := key[:7] + "..."
 	createdAt := time.Now().Unix()
 
+	// Default rate limit if not specified
+	if rateLimit <= 0 {
+		rateLimit = 10
+	}
+	if ratePeriod == "" {
+		ratePeriod = "minute"
+	}
+
 	_, err := km.db.Exec(`
-		INSERT INTO app_keys (name, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, name, hashStr, prefix, expiresAt, budgetLimit, 0, period, createdAt, isMock, mockConfig, createdAt)
+		INSERT INTO app_keys (name, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, name, hashStr, prefix, expiresAt, budgetLimit, 0, period, createdAt, isMock, mockConfig, rateLimit, ratePeriod, createdAt)
 
 	if err != nil {
 		return "", fmt.Errorf("failed to insert key: %w", err)
@@ -69,9 +79,9 @@ func (km *KeyManager) VerifyKey(key string) (*KeyInfo, error) {
 	var lastResetAt int64
 
 	err := km.db.QueryRow(`
-		SELECT id, name, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, created_at
+		SELECT id, name, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at
 		FROM app_keys WHERE key_hash = ?
-	`, hashStr).Scan(&info.ID, &info.Name, &info.Prefix, &expiresAt, &info.BudgetLimit, &info.BudgetUsage, &info.BudgetPeriod, &lastResetAt, &info.IsMock, &info.MockConfig, &info.CreatedAt)
+	`, hashStr).Scan(&info.ID, &info.Name, &info.Prefix, &expiresAt, &info.BudgetLimit, &info.BudgetUsage, &info.BudgetPeriod, &lastResetAt, &info.IsMock, &info.MockConfig, &info.RateLimit, &info.RatePeriod, &info.CreatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -133,7 +143,7 @@ func (km *KeyManager) IncrementUsage(keyID int64, cost float64) error {
 }
 
 func (km *KeyManager) ListKeys() ([]KeyInfo, error) {
-	rows, err := km.db.Query("SELECT id, name, prefix, expires_at, budget_limit, budget_usage, budget_period, is_mock, mock_config, created_at FROM app_keys ORDER BY created_at DESC")
+	rows, err := km.db.Query("SELECT id, name, prefix, expires_at, budget_limit, budget_usage, budget_period, is_mock, mock_config, rate_limit, rate_period, created_at FROM app_keys ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +153,7 @@ func (km *KeyManager) ListKeys() ([]KeyInfo, error) {
 	for rows.Next() {
 		var k KeyInfo
 		var expiresAt sql.NullInt64
-		if err := rows.Scan(&k.ID, &k.Name, &k.Prefix, &expiresAt, &k.BudgetLimit, &k.BudgetUsage, &k.BudgetPeriod, &k.IsMock, &k.MockConfig, &k.CreatedAt); err != nil {
+		if err := rows.Scan(&k.ID, &k.Name, &k.Prefix, &expiresAt, &k.BudgetLimit, &k.BudgetUsage, &k.BudgetPeriod, &k.IsMock, &k.MockConfig, &k.RateLimit, &k.RatePeriod, &k.CreatedAt); err != nil {
 			return nil, err
 		}
 		if expiresAt.Valid {
@@ -156,14 +166,12 @@ func (km *KeyManager) ListKeys() ([]KeyInfo, error) {
 }
 
 // UpdateKey updates modifiable fields of a key.
-func (km *KeyManager) UpdateKey(id int, name string, budgetLimit float64, isMock bool, mockConfig string) error {
-	// Expiration and Period are immutable to prevent logic tampering after creation.
-	// BudgetLimit can be changed (e.g. to top up).
+func (km *KeyManager) UpdateKey(id int, name string, budgetLimit float64, isMock bool, mockConfig string, rateLimit int, ratePeriod string) error {
 	_, err := km.db.Exec(`
 		UPDATE app_keys 
-		SET name = ?, budget_limit = ?, is_mock = ?, mock_config = ?
+		SET name = ?, budget_limit = ?, is_mock = ?, mock_config = ?, rate_limit = ?, rate_period = ?
 		WHERE id = ?
-	`, name, budgetLimit, isMock, mockConfig, id)
+	`, name, budgetLimit, isMock, mockConfig, rateLimit, ratePeriod, id)
 	return err
 }
 
