@@ -81,33 +81,40 @@ export default function Dashboard() {
     }
 
     return (
-        <div class="flex flex-col gap-8">
+        <div class="flex flex-col gap-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             {/* Stats Overview */}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-white/5 backdrop-blur-md border border-white/5 p-6 rounded-3xl flex flex-col gap-1 transition-all hover:bg-white/[0.07]">
-                    <span class="text-xs font-semibold uppercase tracking-widest text-base-content/40">Total Provisioned</span>
-                    <div class="flex items-baseline gap-2 mt-2">
-                        <span class="text-3xl font-bold text-white">{keys.length}</span>
-                        <span class="text-sm text-base-content/40">Keys</span>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="group relative overflow-hidden bg-white/5 backdrop-blur-2xl border border-white/5 p-8 rounded-[2rem] flex flex-col gap-1 transition-all duration-500 hover:bg-white/[0.08] hover:border-white/10 hover:shadow-2xl hover:shadow-primary/10">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/20 transition-all duration-700"></div>
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2">Registry Ledger</span>
+                    <div class="flex items-baseline gap-3">
+                        <span class="text-4xl font-black text-white tracking-tighter">{keys.length}</span>
+                        <span class="text-[10px] font-bold text-white/20 uppercase tracking-widest">Provisioned</span>
                     </div>
                 </div>
-                <div class="bg-white/5 backdrop-blur-md border border-white/5 p-6 rounded-3xl flex flex-col gap-1 transition-all hover:bg-white/[0.07]">
-                    <span class="text-xs font-semibold uppercase tracking-widest text-base-content/40">Active Fleet</span>
-                    <div class="flex items-baseline gap-2 mt-2">
-                        <span class="text-3xl font-bold text-success">{activeKeys}</span>
-                        <span class="text-sm text-base-content/40">Healthy</span>
+                <div class="group relative overflow-hidden bg-white/5 backdrop-blur-2xl border border-white/5 p-8 rounded-[2rem] flex flex-col gap-1 transition-all duration-500 hover:bg-white/[0.08] hover:border-white/10 hover:shadow-2xl hover:shadow-success/10">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-success/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-success/20 transition-all duration-700"></div>
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2">Fleet Health</span>
+                    <div class="flex items-baseline gap-3">
+                        <span class="text-4xl font-black text-success tracking-tighter">{activeKeys}</span>
+                        <span class="text-[10px] font-bold text-white/20 uppercase tracking-widest">Active</span>
                     </div>
                 </div>
-                <div class="bg-white/5 backdrop-blur-md border border-white/5 p-6 rounded-3xl flex flex-col gap-1 transition-all hover:bg-white/[0.07]">
-                    <span class="text-xs font-semibold uppercase tracking-widest text-base-content/40">Burn Rate (Total)</span>
-                    <div class="flex items-baseline gap-2 mt-2">
-                        <span class="text-3xl font-bold text-primary">${totalUsage.toFixed(2)}</span>
-                        <span class="text-sm text-base-content/40">/ {totalBudget > 0 ? "$" + totalBudget.toFixed(0) : "∞"}</span>
+                <div class="group relative overflow-hidden bg-white/5 backdrop-blur-2xl border border-white/5 p-8 rounded-[2rem] flex flex-col gap-1 transition-all duration-500 hover:bg-white/[0.08] hover:border-white/10 hover:shadow-2xl hover:shadow-secondary/10">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-secondary/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-secondary/20 transition-all duration-700"></div>
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-2">Monetary Velocity</span>
+                    <div class="flex items-baseline gap-3">
+                        <span class="text-4xl font-black text-primary tracking-tighter">${totalUsage.toFixed(2)}</span>
+                        <span class="text-[10px] font-bold text-white/20 uppercase tracking-widest font-mono">/ {totalBudget > 0 ? "$" + totalBudget.toFixed(0) : "∞"} Cap</span>
                     </div>
                 </div>
             </div>
 
-            <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-5">
+                <div class="flex items-center justify-between px-2">
+                    <h2 class="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Managed Access Points</h2>
+                    <div class="h-px flex-1 bg-white/5 ml-6"></div>
+                </div>
                 {keys.map((key) => (
                     <KeyCard
                         key={key.id}
