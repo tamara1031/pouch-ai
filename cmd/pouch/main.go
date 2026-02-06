@@ -1,11 +1,13 @@
 package main
 
 import (
+	"flag"
+	"io/fs"
 	"log"
 	"path/filepath"
 
 	"pouch-ai/internal/server"
-    "pouch-ai/ui"
+	"pouch-ai/ui"
 )
 
 func main() {
