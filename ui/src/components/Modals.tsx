@@ -169,9 +169,9 @@ export default function Modals() {
                             )}
                             <div class="form-control">
                                 <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Rate Limit</span></label>
-                                <div class="flex gap-2">
-                                    <input type="number" name="rate_limit" defaultValue="10" min="0" class="input input-bordered flex-1 bg-white/5 border-white/5 rounded-xl font-mono" />
-                                    <select name="rate_period" class="select select-bordered bg-white/5 border-white/5 rounded-xl text-[10px] font-bold uppercase w-24">
+                                <div class="flex flex-row gap-2">
+                                    <input type="number" name="rate_limit" defaultValue="10" min="0" class="input input-bordered flex-1 min-w-0 bg-white/5 border-white/5 rounded-xl font-mono" />
+                                    <select name="rate_period" class="select select-bordered bg-white/5 border-white/5 rounded-xl text-[10px] font-bold uppercase w-20">
                                         <option value="minute" selected>RPM</option>
                                         <option value="second">RPS</option>
                                         <option value="none">UNLT</option>
@@ -229,9 +229,9 @@ export default function Modals() {
                                 </div>
                                 <div class="form-control">
                                     <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Rate Limit</span></label>
-                                    <div class="flex gap-2">
-                                        <input type="number" name="rate_limit" defaultValue={editKey.rate_limit} min="0" class="input input-bordered flex-1 bg-white/5 border-white/5 rounded-xl font-mono" />
-                                        <select name="rate_period" defaultValue={editKey.rate_period} class="select select-bordered bg-white/5 border-white/5 rounded-xl text-[10px] font-bold uppercase w-24">
+                                    <div class="flex flex-row gap-2">
+                                        <input type="number" name="rate_limit" defaultValue={editKey.rate_limit} min="0" class="input input-bordered flex-1 min-w-0 bg-white/5 border-white/5 rounded-xl font-mono" />
+                                        <select name="rate_period" defaultValue={editKey.rate_period} class="select select-bordered bg-white/5 border-white/5 rounded-xl text-[10px] font-bold uppercase w-20">
                                             <option value="minute">RPM</option>
                                             <option value="second">RPS</option>
                                             <option value="none">UNLT</option>

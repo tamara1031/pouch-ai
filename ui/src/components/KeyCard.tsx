@@ -125,7 +125,7 @@ export default function KeyCard({ keyData, onEdit, onRevoke }: Props) {
                         </div>
                     </div>
 
-                    <div class="w-full lg:w-auto grid grid-cols-2 md:grid-cols-4 lg:flex lg:items-center gap-8">
+                    <div class="w-full lg:w-auto grid grid-cols-2 md:grid-cols-4 lg:flex lg:items-center gap-4 sm:gap-8">
                         <div class="space-y-1">
                             <span class="text-[9px] font-bold uppercase tracking-wider text-white/20">Usage</span>
                             <div class="flex items-baseline gap-1">
@@ -137,9 +137,9 @@ export default function KeyCard({ keyData, onEdit, onRevoke }: Props) {
                             </div>
                         </div>
 
-                        <div class="space-y-1">
+                        <div class="space-y-1 min-w-0">
                             <span class="text-[9px] font-bold uppercase tracking-wider text-white/20">Rate</span>
-                            <div class="text-lg font-bold text-white tracking-tight font-mono">{rateLimitText}</div>
+                            <div class="text-lg font-bold text-white tracking-tight font-mono truncate">{rateLimitText}</div>
                         </div>
 
                         <div class="space-y-1 hidden md:block">
