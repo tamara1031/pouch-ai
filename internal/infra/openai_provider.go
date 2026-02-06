@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"pouch-ai/internal/domain"
 	"strings"
+	"time"
 )
 
 type TokenCounter interface {
@@ -150,4 +152,37 @@ func (p *OpenAIProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
 		return "", false, err
 	}
 	return domain.Model(req.Model), req.Stream, nil
+}
+
+func (p *OpenAIProvider) GetUsage(ctx context.Context) (float64, error) {
+	now := time.Now()
+	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02")
+	end := now.Format("2006-01-02")
+
+	url := fmt.Sprintf("https://api.openai.com/v1/dashboard/billing/usage?start_date=%s&end_date=%s", start, end)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Authorization", "Bearer "+p.apiKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("openai usage api returned status: %d", resp.StatusCode)
+	}
+
+	var data struct {
+		TotalUsage float64 `json:"total_usage"` // in cents
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return 0, err
+	}
+
+	return data.TotalUsage / 100.0, nil // Convert cents to dollars
 }

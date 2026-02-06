@@ -86,6 +86,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	apiGroup.POST("/config/app-keys", keyHandler.CreateKey)
 	apiGroup.PUT("/config/app-keys/:id", keyHandler.UpdateKey)
 	apiGroup.DELETE("/config/app-keys/:id", keyHandler.DeleteKey)
+	apiGroup.GET("/config/providers/usage", keyHandler.GetProviderUsage)
 
 	// UI
 	e.GET("/*", echo.WrapHandler(http.FileServer(http.FS(assets))))

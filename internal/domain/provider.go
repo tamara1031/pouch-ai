@@ -35,11 +35,15 @@ type Provider interface {
 	ParseOutputUsage(model Model, responseBody []byte, isStream bool) (int, error)
 	// ParseRequest extracts generic info from provider-specific request body
 	ParseRequest(body []byte) (Model, bool, error)
+
+	// GetUsage returns the total usage cost from the provider side (e.g. billing)
+	GetUsage(ctx context.Context) (float64, error)
 }
 
 type Registry interface {
 	Register(p Provider)
 	Get(name string) (Provider, error)
+	List() []Provider
 }
 
 type DefaultRegistry struct {
@@ -60,4 +64,12 @@ func (r *DefaultRegistry) Get(name string) (Provider, error) {
 		return nil, fmt.Errorf("provider not found: %s", name)
 	}
 	return p, nil
+}
+
+func (r *DefaultRegistry) List() []Provider {
+	var providers []Provider
+	for _, p := range r.providers {
+		providers = append(providers, p)
+	}
+	return providers
 }

@@ -134,6 +134,20 @@ func (s *KeyService) IncrementUsage(ctx context.Context, id domain.ID, amount fl
 	return s.repo.IncrementUsage(ctx, id, amount)
 }
 
+func (s *KeyService) GetProviderUsage(ctx context.Context) (map[string]float64, error) {
+	usage := make(map[string]float64)
+	for _, p := range s.registry.List() {
+		u, err := p.GetUsage(ctx)
+		if err != nil {
+			// Log error but continue with other providers
+			fmt.Printf("Error fetching usage for %s: %v\n", p.Name(), err)
+			continue
+		}
+		usage[p.Name()] = u
+	}
+	return usage, nil
+}
+
 // Helpers
 
 func (s *KeyService) generateRandomKey() (string, error) {

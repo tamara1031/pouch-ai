@@ -4,6 +4,7 @@ import KeyCard from "./KeyCard";
 
 export default function Dashboard() {
     const [keys, setKeys] = useState<Key[]>([]);
+    const [providerUsage, setProviderUsage] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
 
     const loadKeys = async () => {
@@ -19,8 +20,19 @@ export default function Dashboard() {
         }
     };
 
+    const loadProviderUsage = async () => {
+        try {
+            const res = await fetch("/v1/config/providers/usage", { cache: "no-store" });
+            const data = await res.json();
+            setProviderUsage(data || {});
+        } catch (err) {
+            console.error("Failed to load provider usage:", err);
+        }
+    };
+
     useEffect(() => {
         loadKeys();
+        loadProviderUsage();
     }, []);
 
     const handleRevoke = async (id: number) => {
@@ -104,6 +116,12 @@ export default function Dashboard() {
                         <span class="text-3xl font-bold text-primary tracking-tight">${totalUsage.toFixed(2)}</span>
                         <span class="text-[10px] font-medium text-white/20 font-mono">/ {totalBudget > 0 ? "$" + totalBudget.toFixed(0) : "∞"}</span>
                     </div>
+                    {providerUsage["openai"] !== undefined && (
+                        <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between">
+                            <span class="text-[9px] font-bold uppercase tracking-wider text-white/20">OpenAI Actual</span>
+                            <span class="text-[10px] font-bold text-white/40">${providerUsage["openai"].toFixed(2)}</span>
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -22,7 +22,7 @@ Its primary goal is **Financial Safety** when using pay-per-token APIs (like Ope
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/pouch-ai.git
+   git clone https://github.com/tamara1031/pouch-ai.git
    cd pouch-ai
    ```
 

@@ -90,3 +90,11 @@ func (h *KeyHandler) DeleteKey(c echo.Context) error {
 
 	return c.NoContent(http.StatusOK)
 }
+
+func (h *KeyHandler) GetProviderUsage(c echo.Context) error {
+	usage, err := h.service.GetProviderUsage(c.Request().Context())
+	if err != nil {
+		return InternalError(c, err.Error())
+	}
+	return c.JSON(http.StatusOK, usage)
+}
