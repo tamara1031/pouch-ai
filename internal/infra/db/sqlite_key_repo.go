@@ -23,9 +23,9 @@ func (r *SQLiteKeyRepository) Save(ctx context.Context, k *key.Key) error {
 	}
 
 	res, err := r.db.ExecContext(ctx, `
-		INSERT INTO app_keys (name, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, k.Name, k.KeyHash, k.Prefix, expiresAt, k.Budget.Limit, k.Budget.Usage, k.Budget.Period, k.LastResetAt.Unix(), k.IsMock, k.MockConfig, k.RateLimit.Limit, k.RateLimit.Period, k.CreatedAt.Unix())
+		INSERT INTO app_keys (name, provider, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, k.Name, k.Provider, k.KeyHash, k.Prefix, expiresAt, k.Budget.Limit, k.Budget.Usage, k.Budget.Period, k.LastResetAt.Unix(), k.IsMock, k.MockConfig, k.RateLimit.Limit, k.RateLimit.Period, k.CreatedAt.Unix())
 
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (r *SQLiteKeyRepository) Save(ctx context.Context, k *key.Key) error {
 
 func (r *SQLiteKeyRepository) GetByID(ctx context.Context, id key.ID) (*key.Key, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, name, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at
+		SELECT id, name, provider, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at
 		FROM app_keys WHERE id = ?
 	`, id)
 	return r.scanKey(row)
@@ -48,7 +48,7 @@ func (r *SQLiteKeyRepository) GetByID(ctx context.Context, id key.ID) (*key.Key,
 
 func (r *SQLiteKeyRepository) GetByHash(ctx context.Context, hash string) (*key.Key, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, name, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at
+		SELECT id, name, provider, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at
 		FROM app_keys WHERE key_hash = ?
 	`, hash)
 	return r.scanKey(row)
@@ -56,7 +56,7 @@ func (r *SQLiteKeyRepository) GetByHash(ctx context.Context, hash string) (*key.
 
 func (r *SQLiteKeyRepository) List(ctx context.Context) ([]*key.Key, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, name, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at
+		SELECT id, name, provider, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at
 		FROM app_keys ORDER BY created_at DESC
 	`)
 	if err != nil {
@@ -78,9 +78,9 @@ func (r *SQLiteKeyRepository) List(ctx context.Context) ([]*key.Key, error) {
 func (r *SQLiteKeyRepository) Update(ctx context.Context, k *key.Key) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE app_keys 
-		SET name = ?, budget_limit = ?, is_mock = ?, mock_config = ?, rate_limit = ?, rate_period = ?
+		SET name = ?, provider = ?, budget_limit = ?, is_mock = ?, mock_config = ?, rate_limit = ?, rate_period = ?
 		WHERE id = ?
-	`, k.Name, k.Budget.Limit, k.IsMock, k.MockConfig, k.RateLimit.Limit, k.RateLimit.Period, k.ID)
+	`, k.Name, k.Provider, k.Budget.Limit, k.IsMock, k.MockConfig, k.RateLimit.Limit, k.RateLimit.Period, k.ID)
 	return err
 }
 
@@ -109,7 +109,7 @@ func (r *SQLiteKeyRepository) scanKey(sc interface {
 	var lastResetAt, createdAt int64
 
 	err := sc.Scan(
-		&k.ID, &k.Name, &k.KeyHash, &k.Prefix, &expiresAt,
+		&k.ID, &k.Name, &k.Provider, &k.KeyHash, &k.Prefix, &expiresAt,
 		&k.Budget.Limit, &k.Budget.Usage, &k.Budget.Period,
 		&lastResetAt, &k.IsMock, &k.MockConfig,
 		&k.RateLimit.Limit, &k.RateLimit.Period,

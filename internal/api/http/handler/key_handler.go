@@ -27,6 +27,7 @@ func (h *KeyHandler) ListKeys(c echo.Context) error {
 func (h *KeyHandler) CreateKey(c echo.Context) error {
 	var req struct {
 		Name         string  `json:"name"`
+		Provider     string  `json:"provider"`
 		ExpiresAt    *int64  `json:"expires_at"`
 		BudgetLimit  float64 `json:"budget_limit"`
 		BudgetPeriod string  `json:"budget_period"`
@@ -39,7 +40,11 @@ func (h *KeyHandler) CreateKey(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	raw, _, err := h.service.CreateKey(c.Request().Context(), req.Name, req.ExpiresAt, req.BudgetLimit, req.BudgetPeriod, req.IsMock, req.MockConfig, req.RateLimit, req.RatePeriod)
+	if req.Provider == "" {
+		req.Provider = "openai"
+	}
+
+	raw, _, err := h.service.CreateKey(c.Request().Context(), req.Name, req.Provider, req.ExpiresAt, req.BudgetLimit, req.BudgetPeriod, req.IsMock, req.MockConfig, req.RateLimit, req.RatePeriod)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -57,6 +62,7 @@ func (h *KeyHandler) UpdateKey(c echo.Context) error {
 
 	var req struct {
 		Name        string  `json:"name"`
+		Provider    string  `json:"provider"`
 		BudgetLimit float64 `json:"budget_limit"`
 		IsMock      bool    `json:"is_mock"`
 		MockConfig  string  `json:"mock_config"`
@@ -67,7 +73,7 @@ func (h *KeyHandler) UpdateKey(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	err = h.service.UpdateKey(c.Request().Context(), id, req.Name, req.BudgetLimit, req.IsMock, req.MockConfig, req.RateLimit, req.RatePeriod)
+	err = h.service.UpdateKey(c.Request().Context(), id, req.Name, req.Provider, req.BudgetLimit, req.IsMock, req.MockConfig, req.RateLimit, req.RatePeriod)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

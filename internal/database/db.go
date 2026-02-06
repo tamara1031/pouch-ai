@@ -43,6 +43,7 @@ func migrate(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS app_keys (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
+		provider TEXT NOT NULL DEFAULT 'openai',
 		key_hash TEXT NOT NULL UNIQUE,
 		prefix TEXT NOT NULL,
 		expires_at INTEGER,
@@ -64,6 +65,7 @@ func migrate(db *sql.DB) error {
 	}
 
 	// Add columns if they don't exist (for existing DBs)
+	db.Exec("ALTER TABLE app_keys ADD COLUMN provider TEXT NOT NULL DEFAULT 'openai'")
 	db.Exec("ALTER TABLE app_keys ADD COLUMN rate_limit INTEGER DEFAULT 10")
 	db.Exec("ALTER TABLE app_keys ADD COLUMN rate_period TEXT DEFAULT 'minute'")
 

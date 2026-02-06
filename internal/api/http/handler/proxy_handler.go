@@ -34,8 +34,12 @@ func (h *ProxyHandler) Proxy(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "App Key not found")
 	}
 
-	// Identify Provider (MVP: always openai)
-	prov, err := h.registry.Get("openai")
+	// Identify Provider
+	provName := appKey.Provider
+	if provName == "" {
+		provName = "openai"
+	}
+	prov, err := h.registry.Get(provName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Provider not found")
 	}

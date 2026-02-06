@@ -21,6 +21,7 @@ type RateLimit struct {
 type Key struct {
 	ID          ID
 	Name        string
+	Provider    string // "openai", "anthropic", etc.
 	KeyHash     string
 	Prefix      string
 	ExpiresAt   *time.Time

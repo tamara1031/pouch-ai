@@ -18,7 +18,7 @@ func NewKeyService(repo key.Repository) *KeyService {
 	return &KeyService{repo: repo}
 }
 
-func (s *KeyService) CreateKey(ctx context.Context, name string, expiresAt *int64, budgetLimit float64, budgetPeriod string, isMock bool, mockConfig string, rateLimit int, ratePeriod string) (string, *key.Key, error) {
+func (s *KeyService) CreateKey(ctx context.Context, name string, provider string, expiresAt *int64, budgetLimit float64, budgetPeriod string, isMock bool, mockConfig string, rateLimit int, ratePeriod string) (string, *key.Key, error) {
 	rawKey, err := s.generateRandomKey()
 	if err != nil {
 		return "", nil, err
@@ -28,9 +28,10 @@ func (s *KeyService) CreateKey(ctx context.Context, name string, expiresAt *int6
 	prefix := rawKey[:8]
 
 	k := &key.Key{
-		Name:    name,
-		KeyHash: hash,
-		Prefix:  prefix,
+		Name:     name,
+		Provider: provider,
+		KeyHash:  hash,
+		Prefix:   prefix,
 		Budget: key.Budget{
 			Limit:  budgetLimit,
 			Period: budgetPeriod,
@@ -93,7 +94,7 @@ func (s *KeyService) ListKeys(ctx context.Context) ([]*key.Key, error) {
 	return s.repo.List(ctx)
 }
 
-func (s *KeyService) UpdateKey(ctx context.Context, id int64, name string, budgetLimit float64, isMock bool, mockConfig string, rateLimit int, ratePeriod string) error {
+func (s *KeyService) UpdateKey(ctx context.Context, id int64, name string, provider string, budgetLimit float64, isMock bool, mockConfig string, rateLimit int, ratePeriod string) error {
 	k, err := s.repo.GetByID(ctx, key.ID(id))
 	if err != nil {
 		return err
@@ -103,6 +104,7 @@ func (s *KeyService) UpdateKey(ctx context.Context, id int64, name string, budge
 	}
 
 	k.Name = name
+	k.Provider = provider
 	k.Budget.Limit = budgetLimit
 	k.IsMock = isMock
 	k.MockConfig = mockConfig
