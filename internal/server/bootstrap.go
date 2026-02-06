@@ -12,10 +12,14 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/time/rate"
 
-	"pouch-ai/internal/auth"
+	"pouch-ai/internal/api/http/handler"
+	pouch_mw "pouch-ai/internal/api/http/middleware"
+	"pouch-ai/internal/app"
 	"pouch-ai/internal/database"
-	"pouch-ai/internal/proxy"
-	"pouch-ai/internal/token"
+	"pouch-ai/internal/domain/provider"
+	"pouch-ai/internal/infra/db"
+	"pouch-ai/internal/infra/provider/openai"
+	infra_proxy "pouch-ai/internal/infra/proxy"
 )
 
 type Server struct {
@@ -24,36 +28,42 @@ type Server struct {
 }
 
 func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, error) {
-	// 1. Init DB
+	// 1. Init Database
 	if err := database.InitDB(dataDir); err != nil {
 		return nil, err
 	}
 
-	// 2. Dependencies
-	tok := token.NewCounter()
-	creds := proxy.NewCredentialsManager()
-	keyMgr := auth.NewKeyManager(database.DB)
-	pric, err := proxy.NewPricing()
+	// 2. Initialize Repositories and Infrastructure
+	keyRepo := db.NewSQLiteKeyRepository(database.DB)
+
+	pricing, err := openai.NewPricing()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load pricing: %w", err)
 	}
 
-	// 3. Proxy Handler
-	prox, err := proxy.NewHandler(tok, pric, targetURL, creds)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init proxy: %w", err)
-	}
+	tokenCounter := openai.NewTiktokenCounter()
 
-	prox.UsageCallback = func(c echo.Context, cost float64) {
-		keyID, ok := c.Get("app_key_id").(int64)
-		if ok && keyID > 0 {
-			if err := keyMgr.IncrementUsage(keyID, cost); err != nil {
-				fmt.Printf("Failed to update key usage: %v\n", err)
-			}
-		}
-	}
+	openaiProv := openai.NewOpenAIProvider(os.Getenv("OPENAI_API_KEY"), targetURL, pricing, tokenCounter)
 
-	// 4. Echo Setup
+	registry := provider.NewRegistry()
+	registry.Register(openaiProv)
+
+	// 3. Initialize Application Services
+	keyService := app.NewKeyService(keyRepo)
+
+	executionHandler := infra_proxy.NewExecutionHandler()
+	proxyService := app.NewProxyService(
+		executionHandler,
+		app.NewRateLimitMiddleware(),
+		app.NewMockMiddleware(),
+		app.NewUsageTrackingMiddleware(keyService),
+	)
+
+	// 4. Initialize Handlers
+	keyHandler := handler.NewKeyHandler(keyService)
+	proxyHandler := handler.NewProxyHandler(proxyService, registry)
+
+	// 5. Echo Setup
 	e := echo.New()
 	e.HideBanner = true
 
@@ -61,8 +71,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
-	// 5. Rate Limiter (Panic Guard)
-	// Use THROTTLE_RATE env var (requests/minute), default 100.
+	// 6. Global Rate Limiter (Panic Guard)
 	throttleRate := 100
 	if envRate := os.Getenv("THROTTLE_RATE"); envRate != "" {
 		if r, err := strconv.Atoi(envRate); err == nil && r > 0 {
@@ -80,89 +89,19 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 		}
 	})
 
-	// 6. Routes
+	// 7. Routes
 	api := e.Group("/v1")
 
-	// OpenAI Chat Completions
-	// OpenAI Chat Completions
-	// OpenAI Chat Completions
-	api.POST("/chat/completions", prox.Handle, AuthMiddleware(keyMgr))
+	// Proxy Route
+	api.POST("/chat/completions", proxyHandler.Proxy, pouch_mw.AuthMiddleware(keyService))
 
-	// Admin / System Routes
+	// Config Routes
+	api.GET("/config/app-keys", keyHandler.ListKeys)
+	api.POST("/config/app-keys", keyHandler.CreateKey)
+	api.PUT("/config/app-keys/:id", keyHandler.UpdateKey)
+	api.DELETE("/config/app-keys/:id", keyHandler.DeleteKey)
 
-	// Config: App Keys management
-	api.GET("/config/app-keys", func(c echo.Context) error {
-		keys, err := keyMgr.ListKeys()
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
-		return c.JSON(http.StatusOK, keys)
-	})
-
-	api.POST("/config/app-keys", func(c echo.Context) error {
-		var req struct {
-			Name         string  `json:"name"`
-			ExpiresAt    *int64  `json:"expires_at"`
-			BudgetLimit  float64 `json:"budget_limit"`
-			BudgetPeriod string  `json:"budget_period"`
-			IsMock       bool    `json:"is_mock"`
-			MockConfig   string  `json:"mock_config"`
-			RateLimit    int     `json:"rate_limit"`
-			RatePeriod   string  `json:"rate_period"`
-		}
-		if err := c.Bind(&req); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-		}
-		if req.Name == "" {
-			return echo.NewHTTPError(http.StatusBadRequest, "Name is required")
-		}
-
-		key, err := keyMgr.GenerateKey(req.Name, req.ExpiresAt, req.BudgetLimit, req.BudgetPeriod, req.IsMock, req.MockConfig, req.RateLimit, req.RatePeriod)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
-		return c.JSON(http.StatusOK, map[string]string{"key": key})
-	})
-
-	api.PUT("/config/app-keys/:id", func(c echo.Context) error {
-		id := 0
-		if _, err := fmt.Sscanf(c.Param("id"), "%d", &id); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "Invalid ID")
-		}
-		var req struct {
-			Name        string  `json:"name"`
-			BudgetLimit float64 `json:"budget_limit"`
-			IsMock      bool    `json:"is_mock"`
-			MockConfig  string  `json:"mock_config"`
-			RateLimit   int     `json:"rate_limit"`
-			RatePeriod  string  `json:"rate_period"`
-		}
-		if err := c.Bind(&req); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-		}
-		if req.Name == "" {
-			return echo.NewHTTPError(http.StatusBadRequest, "Name is required")
-		}
-
-		if err := keyMgr.UpdateKey(id, req.Name, req.BudgetLimit, req.IsMock, req.MockConfig, req.RateLimit, req.RatePeriod); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
-		return c.JSON(http.StatusOK, "updated")
-	})
-
-	api.DELETE("/config/app-keys/:id", func(c echo.Context) error {
-		id := 0
-		if _, err := fmt.Sscanf(c.Param("id"), "%d", &id); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "Invalid ID")
-		}
-		if err := keyMgr.RevokeKey(id); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
-		return c.JSON(http.StatusOK, "deleted")
-	})
-
-	// Serve UI embedded
-	// Serve static files from the root
+	// UI
 	e.GET("/*", echo.WrapHandler(http.FileServer(http.FS(assets))))
 
 	return &Server{echo: e, Port: port}, nil
