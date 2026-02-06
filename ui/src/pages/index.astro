@@ -5,35 +5,49 @@ import Modals from "../components/Modals";
 ---
 
 <Layout title="API Keys - Pouch AI">
-    <div class="max-w-5xl mx-auto py-12 px-6">
+    <div class="max-w-5xl mx-auto py-16 px-6">
         {/* Header - Static HTML */}
         <div
-            class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6 mb-10"
+            class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-8 mb-12"
         >
-            <div>
-                <h1 class="text-3xl font-bold text-base-content">API Keys</h1>
-                <p class="text-base-content/50 mt-2">
-                    Create and manage API keys for your applications.
+            <div class="space-y-2">
+                <div
+                    class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black uppercase tracking-widest text-primary mb-2"
+                >
+                    Fleet Management
+                </div>
+                <h1 class="text-4xl font-extrabold text-white tracking-tight">
+                    API Governance
+                </h1>
+                <p class="text-base-content/40 font-medium max-w-md">
+                    Provision, audit, and constraint-limit your application's
+                    access to external LLM providers.
                 </p>
             </div>
             <label
                 for="create-key-modal"
-                class="btn btn-primary shadow-lg shadow-primary/20 gap-2 group"
+                class="btn btn-primary rounded-2xl px-8 h-14 shadow-2xl shadow-primary/25 gap-3 group border-none transform hover:scale-[1.02] active:scale-95 transition-all"
             >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5 transition-transform group-hover:rotate-90"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                <div
+                    class="p-1 rounded-lg bg-white/20 group-hover:rotate-90 transition-transform duration-500"
                 >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 4v16m8-8H4"></path>
-                </svg>
-                Create Key
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M12 4v16m8-8H4"></path>
+                    </svg>
+                </div>
+                <span class="font-bold uppercase tracking-widest text-xs"
+                    >Analyze & Provision</span
+                >
             </label>
         </div>
 

@@ -45,47 +45,78 @@ export default function Dashboard() {
         window.dispatchEvent(event);
     };
 
+    const totalBudget = keys.reduce((acc, k) => acc + (k.budget_limit > 0 ? k.budget_limit : 0), 0);
+    const totalUsage = keys.reduce((acc, k) => acc + k.budget_usage, 0);
+    const activeKeys = keys.filter(k => !k.expires_at || new Date(k.expires_at * 1000) > new Date()).length;
+
     if (loading && keys.length === 0) {
         return (
             <div class="flex flex-col items-center justify-center py-24">
                 <span class="loading loading-spinner loading-lg text-primary"></span>
-                <p class="text-base-content/50 mt-4 text-sm">Loading keys...</p>
+                <p class="text-base-content/50 mt-4 text-sm animate-pulse">Initializing Dashboard...</p>
             </div>
         );
     }
 
     if (keys.length === 0) {
         return (
-            <div class="flex flex-col items-center justify-center py-20 bg-base-100/30 backdrop-blur-sm rounded-2xl border border-base-content/5 text-center">
-                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center mb-6 mx-auto">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            <div class="flex flex-col items-center justify-center py-20 px-6 bg-white/5 backdrop-blur-md rounded-[2rem] border border-white/5 text-center shadow-2xl">
+                <div class="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center mb-8 mx-auto shadow-inner">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                     </svg>
                 </div>
-                <h3 class="text-xl font-semibold mb-2 text-base-content">No API Keys Yet</h3>
-                <p class="text-base-content/50 max-w-sm mx-auto mb-8 text-sm">
-                    Create your first API key to start managing access and budgets for your AI applications.
+                <h3 class="text-2xl font-bold mb-3 text-white">Secure Your AI Fleet</h3>
+                <p class="text-base-content/60 max-w-sm mx-auto mb-10 text-base leading-relaxed">
+                    Create your first programmable API key to impose budgets, rate limits, and monitoring on your LLM usage.
                 </p>
-                <label for="create-key-modal" class="btn btn-primary btn-sm gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <label for="create-key-modal" class="btn btn-primary btn-lg rounded-2xl gap-3 shadow-lg shadow-primary/25 hover:scale-105 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
-                    Create Your First Key
+                    Provision First Key
                 </label>
             </div>
         );
     }
 
     return (
-        <div class="flex flex-col gap-4">
-            {keys.map((key) => (
-                <KeyCard
-                    key={key.id}
-                    keyData={key}
-                    onEdit={handleEdit}
-                    onRevoke={handleRevoke}
-                />
-            ))}
+        <div class="flex flex-col gap-8">
+            {/* Stats Overview */}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white/5 backdrop-blur-md border border-white/5 p-6 rounded-3xl flex flex-col gap-1 transition-all hover:bg-white/[0.07]">
+                    <span class="text-xs font-semibold uppercase tracking-widest text-base-content/40">Total Provisioned</span>
+                    <div class="flex items-baseline gap-2 mt-2">
+                        <span class="text-3xl font-bold text-white">{keys.length}</span>
+                        <span class="text-sm text-base-content/40">Keys</span>
+                    </div>
+                </div>
+                <div class="bg-white/5 backdrop-blur-md border border-white/5 p-6 rounded-3xl flex flex-col gap-1 transition-all hover:bg-white/[0.07]">
+                    <span class="text-xs font-semibold uppercase tracking-widest text-base-content/40">Active Fleet</span>
+                    <div class="flex items-baseline gap-2 mt-2">
+                        <span class="text-3xl font-bold text-success">{activeKeys}</span>
+                        <span class="text-sm text-base-content/40">Healthy</span>
+                    </div>
+                </div>
+                <div class="bg-white/5 backdrop-blur-md border border-white/5 p-6 rounded-3xl flex flex-col gap-1 transition-all hover:bg-white/[0.07]">
+                    <span class="text-xs font-semibold uppercase tracking-widest text-base-content/40">Burn Rate (Total)</span>
+                    <div class="flex items-baseline gap-2 mt-2">
+                        <span class="text-3xl font-bold text-primary">${totalUsage.toFixed(2)}</span>
+                        <span class="text-sm text-base-content/40">/ {totalBudget > 0 ? "$" + totalBudget.toFixed(0) : "∞"}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                {keys.map((key) => (
+                    <KeyCard
+                        key={key.id}
+                        keyData={key}
+                        onEdit={handleEdit}
+                        onRevoke={handleRevoke}
+                    />
+                ))}
+            </div>
         </div>
     );
 }

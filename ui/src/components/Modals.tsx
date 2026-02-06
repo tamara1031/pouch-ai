@@ -113,120 +113,125 @@ export default function Modals() {
         <>
             {/* Create Key Modal */}
             <input type="checkbox" id="create-key-modal" class="modal-toggle" ref={createModalRef} />
-            <div class="modal backdrop-blur-md">
-                <div class="modal-box w-11/12 max-w-4xl p-0 bg-base-100/95 backdrop-blur-xl border border-base-content/5 rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
-                    <div class="p-6 border-b border-base-content/5 flex justify-between items-center bg-base-200/50">
+            <div class="modal backdrop-blur-md transition-all duration-500">
+                <div class="modal-box w-11/12 max-w-4xl p-0 bg-[#0f0f1a]/95 backdrop-blur-2xl border border-white/5 rounded-[2rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-y-auto max-h-[90vh] scale-95 opacity-0 transition-all duration-300 [.modal-toggle:checked\+.modal_&]:scale-100 [.modal-toggle:checked\+.modal_&]:opacity-100">
+                    <div class="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
                         <div>
-                            <h3 class="font-bold text-2xl">Create API Key</h3>
-                            <p class="text-sm text-base-content/50 mt-1">Configure model access and usage policies</p>
+                            <h3 class="font-bold text-3xl text-white tracking-tight">Provision Access Key</h3>
+                            <p class="text-sm text-white/40 mt-1.5 font-medium">Fine-tune your application's AI usage boundaries</p>
                         </div>
-                        <label for="create-key-modal" class="btn btn-sm btn-circle btn-ghost text-base-content/50">✕</label>
+                        <label for="create-key-modal" class="btn btn-sm btn-circle btn-ghost text-white/20 hover:text-white/60 hover:bg-white/5">✕</label>
                     </div>
 
-                    <form id="create-key-form" class="p-6 md:p-8 flex flex-col gap-8" onSubmit={handleCreateSubmit}>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
+                    <form id="create-key-form" class="p-8 md:p-10 flex flex-col gap-10" onSubmit={handleCreateSubmit}>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                             {/* General Settings */}
-                            <div class="flex flex-col gap-6">
-                                <h4 class="text-xs font-bold uppercase tracking-wider text-primary/70">General Settings</h4>
-                                <div class="form-control">
-                                    <label class="label"><span class="label-text font-bold text-base-content/80">Key Name</span></label>
-                                    <input type="text" name="name" placeholder="e.g. Mobile App v2" class="input input-bordered w-full bg-base-200/50 focus:bg-base-100 border-base-content/10 transition-all font-medium" required />
+                            <div class="flex flex-col gap-8">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-1 h-4 bg-primary rounded-full"></div>
+                                    <h4 class="text-xs font-bold uppercase tracking-[0.2em] text-white/30">Registry</h4>
                                 </div>
                                 <div class="form-control">
-                                    <label class="label"><span class="label-text font-bold text-base-content/80">LLM Provider</span></label>
+                                    <label class="label"><span class="label-text font-bold text-white/60 text-xs uppercase tracking-widest">Key Identity</span></label>
+                                    <input type="text" name="name" placeholder="Deployment Identifier" class="input input-bordered w-full bg-white/5 focus:bg-white/[0.08] border-white/5 focus:border-primary/50 rounded-xl transition-all font-medium text-white placeholder:text-white/10 h-12" required />
+                                </div>
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-bold text-white/60 text-xs uppercase tracking-widest">Target Engine</span></label>
                                     <div class="grid grid-cols-1 gap-2">
-                                        <label class="flex items-center gap-3 p-3 rounded-xl border border-primary bg-primary/5 cursor-pointer transition-all">
+                                        <label class="flex items-center gap-3 p-4 rounded-xl border border-primary/50 bg-primary/10 cursor-pointer transition-all shadow-inner">
                                             <input type="radio" name="provider" value="openai" class="radio radio-primary radio-sm" checked />
                                             <div class="flex items-center gap-2">
-                                                <img src="https://simpleicons.org/icons/openai.svg" class="w-4 h-4 dark:invert" />
-                                                <span class="font-semibold text-sm">OpenAI</span>
+                                                <span class="font-bold text-sm text-white">OpenAI</span>
                                             </div>
                                         </label>
-                                        <label class="flex items-center gap-3 p-3 rounded-xl border border-base-content/10 hover:border-primary/50 opacity-50 cursor-not-allowed">
+                                        <label class="flex items-center gap-3 p-4 rounded-xl border border-white/5 bg-white/[0.02] opacity-30 cursor-not-allowed">
                                             <input type="radio" name="provider" value="anthropic" class="radio radio-primary radio-sm" disabled />
-                                            <div class="flex items-center gap-2"><span class="font-semibold text-sm">Anthropic (Soon)</span></div>
+                                            <div class="flex items-center gap-2"><span class="font-bold text-sm text-white/40">Anthropic (Soon)</span></div>
                                         </label>
                                     </div>
-                                </div>
-                                <div class="form-control">
-                                    <label class="label"><span class="label-text font-bold text-base-content/80">Mock Mode</span></label>
-                                    <label class="flex items-center justify-between p-3 rounded-xl bg-base-200/50 border border-base-content/5 cursor-pointer">
-                                        <div>
-                                            <span class="text-sm font-medium">Simulated Response</span>
-                                            <p class="text-[10px] opacity-50">Free & fast. No external calls.</p>
-                                        </div>
-                                        <input type="checkbox" class="toggle toggle-primary toggle-sm" checked={showMock} onChange={() => setShowMock(!showMock)} />
-                                    </label>
                                 </div>
                             </div>
 
                             {/* Budget & Limits */}
-                            <div class="flex flex-col gap-6">
-                                <h4 class="text-xs font-bold uppercase tracking-wider text-primary/70">Budget & Limits</h4>
+                            <div class="flex flex-col gap-8">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-1 h-4 bg-secondary rounded-full"></div>
+                                    <h4 class="text-xs font-bold uppercase tracking-[0.2em] text-white/30">Economics</h4>
+                                </div>
                                 <div class="form-control">
-                                    <label class="label"><span class="label-text font-bold text-base-content/80">Budget Type</span></label>
-                                    <div class="join w-full">
-                                        <input class="join-item btn btn-sm flex-1" type="radio" name="mode_type" value="prepaid" aria-label="One-time" checked={createMode === "prepaid"} onChange={() => setCreateMode("prepaid")} />
-                                        <input class="join-item btn btn-sm flex-1" type="radio" name="mode_type" value="subscription" aria-label="Recurring" checked={createMode === "subscription"} onChange={() => setCreateMode("subscription")} />
+                                    <label class="label"><span class="label-text font-bold text-white/60 text-xs uppercase tracking-widest">Lifecycle Model</span></label>
+                                    <div class="flex p-1 bg-white/5 rounded-xl border border-white/5">
+                                        <button type="button" onClick={() => setCreateMode("prepaid")} class={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${createMode === "prepaid" ? 'bg-white/10 text-white shadow-lg' : 'text-white/30 hover:text-white/60'}`}>ONE-TIME</button>
+                                        <button type="button" onClick={() => setCreateMode("subscription")} class={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${createMode === "subscription" ? 'bg-white/10 text-white shadow-lg' : 'text-white/30 hover:text-white/60'}`}>RECURRING</button>
+                                        <input type="hidden" name="mode_type" value={createMode} />
                                     </div>
                                 </div>
                                 <div class="form-control">
-                                    <label class="label"><span class="label-text font-bold text-base-content/80">Amount ($ USD)</span></label>
-                                    <input type="number" name="budget_limit" defaultValue="5.00" step="0.01" min="0" class="input input-bordered w-full font-mono text-center bg-base-200/50 text-xl font-bold" />
+                                    <label class="label"><span class="label-text font-bold text-white/60 text-xs uppercase tracking-widest">Monetary Limit ($)</span></label>
+                                    <div class="relative group">
+                                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-bold opacity-50">$</span>
+                                        <input type="number" name="budget_limit" defaultValue="5.00" step="0.01" min="0" class="input input-bordered w-full pl-8 bg-white/5 focus:bg-white/[0.08] border-white/5 focus:border-primary/50 rounded-xl transition-all font-mono text-xl font-black text-white" />
+                                    </div>
                                 </div>
                                 {createMode === "prepaid" ? (
                                     <div class="form-control">
-                                        <label class="label"><span class="label-text font-bold text-base-content/80">Auto Expire</span></label>
-                                        <select name="expiration" class="select select-bordered w-full bg-base-200/50 text-sm">
-                                            <option value="7">7 Days</option>
-                                            <option value="30">30 Days</option>
-                                            <option value="90" selected>90 Days</option>
+                                        <label class="label"><span class="label-text font-bold text-white/60 text-xs uppercase tracking-widest">Expiration</span></label>
+                                        <select name="expiration" class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl text-sm font-bold text-white">
+                                            <option value="7">1 Week</option>
+                                            <option value="30">1 Month</option>
+                                            <option value="90" selected>3 Months</option>
                                             <option value="365">1 Year</option>
-                                            <option value="0">Never</option>
+                                            <option value="0">Indefinite</option>
                                         </select>
                                     </div>
                                 ) : (
                                     <div class="form-control">
-                                        <label class="label"><span class="label-text font-bold text-base-content/80">Reset Frequency</span></label>
-                                        <select name="budget_period" class="select select-bordered w-full bg-base-200/50 text-sm">
-                                            <option value="monthly" selected>Every Month</option>
-                                            <option value="weekly">Every Week</option>
+                                        <label class="label"><span class="label-text font-bold text-white/60 text-xs uppercase tracking-widest">Reset Orbit</span></label>
+                                        <select name="budget_period" class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl text-sm font-bold text-white">
+                                            <option value="monthly" selected>Monthly Cycle</option>
+                                            <option value="weekly">Weekly Cycle</option>
                                         </select>
                                     </div>
                                 )}
                             </div>
 
                             {/* Safety & Mocking */}
-                            <div class="flex flex-col gap-6">
-                                <h4 class="text-xs font-bold uppercase tracking-wider text-primary/70">Safety & Mocking</h4>
+                            <div class="flex flex-col gap-8">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-1 h-4 bg-accent rounded-full"></div>
+                                    <h4 class="text-xs font-bold uppercase tracking-[0.2em] text-white/30">Guardrails</h4>
+                                </div>
                                 <div class="form-control">
-                                    <label class="label"><span class="label-text font-bold text-base-content/80">🚦 Rate Limit</span></label>
-                                    <div class="flex gap-2">
-                                        <input type="number" name="rate_limit" defaultValue="10" min="0" class="input input-bordered flex-1 bg-base-200/50 font-mono text-center" />
-                                        <select name="rate_period" class="select select-bordered bg-base-200/50 text-xs">
-                                            <option value="minute" selected>/ min</option>
-                                            <option value="second">/ sec</option>
-                                            <option value="none">None</option>
+                                    <label class="label"><span class="label-text font-bold text-white/60 text-xs uppercase tracking-widest">Rate Governor</span></label>
+                                    <div class="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/5">
+                                        <input type="number" name="rate_limit" defaultValue="10" min="0" class="input input-ghost flex-1 bg-transparent font-mono text-center font-bold text-white h-10 border-none focus:outline-none" />
+                                        <select name="rate_period" class="bg-white/10 rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/60 border-none outline-none">
+                                            <option value="minute" selected>RPM</option>
+                                            <option value="second">RPS</option>
+                                            <option value="none">UNLT</option>
                                         </select>
                                     </div>
                                 </div>
-                                {showMock ? (
-                                    <div class="flex-1 flex flex-col">
-                                        <label class="label"><span class="label-text font-bold text-base-content/80">Mock Response JSON</span></label>
-                                        <textarea name="mock_config" class="textarea textarea-bordered font-mono text-[10px] leading-tight flex-1 w-full bg-base-300/50 border-base-content/5 min-h-[160px] resize-none" defaultValue={`{"choices":[{"message":{"content":"Hello from Mock!", "role":"assistant"}}]}`} />
+                                <div class="form-control flex-1 flex flex-col">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <label class="label py-0"><span class="label-text font-bold text-white/60 text-xs uppercase tracking-widest">Simulation</span></label>
+                                        <input type="checkbox" class="toggle toggle-primary toggle-xs" checked={showMock} onChange={() => setShowMock(!showMock)} />
                                     </div>
-                                ) : (
-                                    <div class="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-base-content/10 rounded-2xl opacity-40">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                                        <span class="text-[10px] font-bold">MOCK CONFIG INACTIVE</span>
-                                    </div>
-                                )}
+                                    {showMock ? (
+                                        <textarea name="mock_config" class="textarea textarea-bordered font-mono text-[10px] leading-tight flex-1 w-full bg-black/40 border-white/5 rounded-xl p-4 text-white/60 resize-none focus:border-primary/30 transition-colors" defaultValue={`{"choices":[{"message":{"content":"Hello from Mock!", "role":"assistant"}}]}`} />
+                                    ) : (
+                                        <div class="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/5 rounded-2xl opacity-20">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                                            <span class="text-[9px] font-black tracking-widest">SANDBOX OFF</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
-                        <div class="flex justify-end gap-3 pt-6 border-t border-base-content/5">
-                            <label for="create-key-modal" class="btn btn-ghost">Cancel</label>
-                            <button type="submit" class="btn btn-primary px-12">Generate Access Key</button>
+                        <div class="flex justify-end gap-3 pt-10 border-t border-white/5">
+                            <label for="create-key-modal" class="btn btn-ghost rounded-xl text-white/40 hover:text-white uppercase tracking-widest font-bold text-xs">Decline</label>
+                            <button type="submit" class="btn btn-primary px-16 rounded-xl shadow-xl shadow-primary/20 transform active:scale-95 transition-transform font-bold uppercase tracking-widest">Provision Key</button>
                         </div>
                     </form>
                 </div>
@@ -234,59 +239,59 @@ export default function Modals() {
 
             {/* Edit Key Modal */}
             <input type="checkbox" id="edit-key-modal" class="modal-toggle" ref={editModalRef} />
-            <div class="modal backdrop-blur-md">
-                <div class="modal-box w-11/12 max-w-2xl bg-base-100/95 backdrop-blur-xl border border-base-content/5 rounded-2xl shadow-2xl p-0 overflow-y-auto max-h-[90vh]">
-                    <div class="p-6 border-b border-base-content/5 bg-base-200/50 flex justify-between items-center">
-                        <h3 class="font-bold text-xl">Edit Access Key</h3>
-                        <label for="edit-key-modal" class="btn btn-sm btn-circle btn-ghost text-base-content/50">✕</label>
+            <div class="modal backdrop-blur-md transition-all duration-500">
+                <div class="modal-box w-11/12 max-w-2xl bg-[#0f0f1a]/95 backdrop-blur-2xl border border-white/5 rounded-[2rem] shadow-2xl p-0 scale-95 opacity-0 transition-all duration-300 [.modal-toggle:checked\+.modal_&]:scale-100 [.modal-toggle:checked\+.modal_&]:opacity-100">
+                    <div class="p-8 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
+                        <h3 class="font-bold text-2xl text-white tracking-tight">Reconfigure Access</h3>
+                        <label for="edit-key-modal" class="btn btn-sm btn-circle btn-ghost text-white/20">✕</label>
                     </div>
                     {editKey && (
-                        <form id="edit-key-form" class="p-6 flex flex-col gap-6" onSubmit={handleEditSubmit}>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <form id="edit-key-form" class="p-8 flex flex-col gap-8" onSubmit={handleEditSubmit}>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div class="form-control">
-                                    <label class="label"><span class="label-text font-bold text-base-content/80">Key Name</span></label>
-                                    <input type="text" name="name" defaultValue={editKey.name} class="input input-bordered w-full bg-base-200/50" required />
+                                    <label class="label"><span class="label-text font-bold text-white/60 text-xs uppercase tracking-widest">Identity</span></label>
+                                    <input type="text" name="name" defaultValue={editKey.name} class="input input-bordered w-full bg-white/5 border-white/5 focus:border-primary/50 rounded-xl font-bold text-white" required />
                                 </div>
                                 <div class="form-control">
-                                    <label class="label"><span class="label-text font-bold text-base-content/80">LLM Provider</span></label>
-                                    <select name="provider" defaultValue={editKey.provider} class="select select-bordered w-full bg-base-200/50">
+                                    <label class="label"><span class="label-text font-bold text-white/60 text-xs uppercase tracking-widest">Provider</span></label>
+                                    <select name="provider" defaultValue={editKey.provider} class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl font-bold text-white">
                                         <option value="openai">OpenAI</option>
                                         <option value="anthropic" disabled>Anthropic (Soon)</option>
                                     </select>
                                 </div>
                                 <div class="form-control">
-                                    <label class="label"><span class="label-text font-bold text-base-content/80">Budget Limit ($)</span></label>
-                                    <input type="number" name="budget_limit" defaultValue={editKey.budget_limit} step="0.01" min="0" class="input input-bordered w-full bg-base-200/50 font-mono" />
+                                    <label class="label"><span class="label-text font-bold text-white/60 text-xs uppercase tracking-widest">New Limit ($)</span></label>
+                                    <input type="number" name="budget_limit" defaultValue={editKey.budget_limit} step="0.01" min="0" class="input input-bordered w-full bg-white/5 border-white/5 focus:border-primary/50 rounded-xl font-mono text-xl font-bold text-white" />
                                 </div>
                                 <div class="form-control">
-                                    <label class="label"><span class="label-text font-bold text-base-content/80">🚦 Rate Limit</span></label>
+                                    <label class="label"><span class="label-text font-bold text-white/60 text-xs uppercase tracking-widest">Rate Governor</span></label>
                                     <div class="flex gap-2">
-                                        <input type="number" name="rate_limit" defaultValue={editKey.rate_limit} min="0" class="input input-bordered flex-1 bg-base-200/50 font-mono" />
-                                        <select name="rate_period" defaultValue={editKey.rate_period} class="select select-bordered bg-base-200/50 text-xs">
-                                            <option value="minute">/ min</option>
-                                            <option value="second">/ sec</option>
-                                            <option value="none">None</option>
+                                        <input type="number" name="rate_limit" defaultValue={editKey.rate_limit} min="0" class="input input-bordered flex-1 bg-white/5 border-white/5 rounded-xl font-mono font-bold text-white" />
+                                        <select name="rate_period" defaultValue={editKey.rate_period} class="select select-bordered bg-white/5 border-white/5 rounded-xl text-[10px] font-black uppercase">
+                                            <option value="minute">RPM</option>
+                                            <option value="second">RPS</option>
+                                            <option value="none">UNLT</option>
                                         </select>
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-control p-4 rounded-xl bg-base-200/50 border border-base-content/5">
-                                <label class="label cursor-pointer justify-between p-0">
+                            <div class="form-control p-6 rounded-2xl bg-white/5 border border-white/5">
+                                <label class="label cursor-pointer justify-between p-0 mb-4">
                                     <div class="flex flex-col">
-                                        <span class="font-bold text-sm">Active Mock Mode</span>
-                                        <span class="text-[10px] opacity-50">Returns static JSON instead of calling API</span>
+                                        <span class="font-bold text-sm text-white/80">Active Sandbox Mode</span>
+                                        <span class="text-[10px] uppercase font-bold text-white/20 tracking-widest mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis mr-4">Override live calls with static JSON</span>
                                     </div>
-                                    <input type="checkbox" class="toggle toggle-primary toggle-sm" checked={showEditMock} onChange={() => setShowEditMock(!showEditMock)} />
+                                    <input type="checkbox" class="toggle toggle-primary toggle-sm shrink-0" checked={showEditMock} onChange={() => setShowEditMock(!showEditMock)} />
                                 </label>
                                 {showEditMock && (
-                                    <div class="mt-4 animate-in fade-in slide-in-from-top-2">
-                                        <textarea name="mock_config" defaultValue={editKey.mock_config} class="textarea textarea-bordered w-full h-32 font-mono text-[10px] bg-base-300/50"></textarea>
+                                    <div class="animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <textarea name="mock_config" defaultValue={editKey.mock_config} class="textarea textarea-bordered w-full h-40 font-mono text-[10px] leading-tight bg-black/40 border-white/5 rounded-xl text-white/60 focus:border-primary/30"></textarea>
                                     </div>
                                 )}
                             </div>
-                            <div class="flex justify-end gap-3 pt-4 border-t border-base-content/5">
-                                <label for="edit-key-modal" class="btn btn-ghost">Cancel</label>
-                                <button type="submit" class="btn btn-primary px-10">Save Changes</button>
+                            <div class="flex justify-end gap-3 pt-6 border-t border-white/5">
+                                <label for="edit-key-modal" class="btn btn-ghost rounded-xl text-white/40 font-bold uppercase tracking-widest text-xs">Cancel</label>
+                                <button type="submit" class="btn btn-primary px-12 rounded-xl font-bold uppercase tracking-widest">Commit Changes</button>
                             </div>
                         </form>
                     )}
@@ -296,21 +301,28 @@ export default function Modals() {
             {/* New Key Display Modal */}
             <input type="checkbox" id="new-key-display-modal" class="modal-toggle" ref={newKeyModalRef} />
             <div class="modal backdrop-blur-md">
-                <div class="modal-box relative max-w-lg w-11/12 p-8 bg-base-100/95 backdrop-blur-xl border border-base-content/5 rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
-                    <h3 class="font-bold text-xl text-success flex items-center gap-2 mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        Key Generated Successfully!
-                    </h3>
-                    <p class="py-4">Please copy your API key now.<br /><span class="font-bold text-error">It will not be shown again.</span></p>
-                    <div class="bg-base-200 p-4 rounded-lg flex justify-between items-center">
-                        <code class="break-all font-mono font-bold text-lg">{newKeyRaw || "pk-xxxxxxxx"}</code>
-                        <button class="btn btn-sm btn-ghost" onClick={() => {
-                            if (newKeyRaw) navigator.clipboard.writeText(newKeyRaw);
-                        }}>Copy</button>
+                <div class="modal-box relative max-w-lg w-11/12 p-10 bg-[#0f0f1a]/95 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] shadow-[0_0_100px_rgba(var(--p-rgb),0.2)] text-center scale-95 opacity-0 transition-all duration-300 [.modal-toggle:checked\+.modal_&]:scale-100 [.modal-toggle:checked\+.modal_&]:opacity-100">
+                    <div class="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(var(--s-rgb),0.2)]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </div>
-                    <div class="modal-action">
-                        <label for="new-key-display-modal" class="btn" onClick={() => window.location.reload()}>Done</label>
+                    <h3 class="font-bold text-3xl text-white tracking-tight mb-2">Secret Key Created</h3>
+                    <p class="text-white/40 font-medium mb-10 leading-relaxed">Persist this key securely. Due to security protocols, <span class="text-error/80 font-bold">it cannot be retrieved again</span> once dismissed.</p>
+
+                    <div class="relative group mb-10">
+                        <div class="absolute -inset-1 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-2xl blur opacity-75"></div>
+                        <div class="relative bg-black/40 backdrop-blur-xl p-5 rounded-xl border border-white/5 flex flex-col gap-4">
+                            <code class="break-all font-mono font-black text-2xl text-primary tracking-tight">{newKeyRaw || "pk-xxxxxxxx"}</code>
+                            <button class="btn btn-sm btn-ghost bg-white/5 hover:bg-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-white/60" onClick={() => {
+                                if (newKeyRaw) navigator.clipboard.writeText(newKeyRaw);
+                            }}>
+                                Copy to Clipboard
+                            </button>
+                        </div>
                     </div>
+
+                    <button class="w-full btn btn-primary btn-lg rounded-2xl font-bold uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform" onClick={() => window.location.reload()}>
+                        Acknowledge & Finalize
+                    </button>
                 </div>
             </div>
         </>

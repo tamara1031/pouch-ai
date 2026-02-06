@@ -32,18 +32,28 @@ const { title } = Astro.props;
       }
     </style>
   </head>
-  <body class="min-h-screen bg-base-300 text-base-content antialiased">
-    <!-- Gradient Background -->
-    <div class="fixed inset-0 -z-10 overflow-hidden">
+  <body
+    class="min-h-screen bg-[#0b0b14] text-base-content antialiased selection:bg-primary/30 selection:text-white"
+  >
+    <!-- Premium Gradient Background -->
+    <div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
       <div
-        class="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-gradient-to-b from-primary/10 via-secondary/5 to-transparent blur-3xl"
+        class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse"
+      >
+      </div>
+      <div
+        class="absolute bottom-[10%] right-[-5%] w-[35%] h-[35%] bg-secondary/15 rounded-full blur-[100px]"
+      >
+      </div>
+      <div
+        class="absolute top-[20%] right-[10%] w-[25%] h-[25%] bg-accent/10 rounded-full blur-[80px]"
       >
       </div>
     </div>
 
     <!-- Navigation -->
     <nav
-      class="sticky top-0 z-50 backdrop-blur-xl bg-base-100/80 border-b border-base-content/5"
+      class="sticky top-0 z-50 backdrop-blur-md bg-base-100/40 border-b border-white/5"
     >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
