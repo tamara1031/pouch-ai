@@ -245,49 +245,29 @@ import Layout from "../layouts/Layout.astro";
                         <div class="form-control">
                             <label class="label"
                                 ><span class="label-text font-bold"
-                                    >Key Function</span
+                                    >Key Type</span
                                 ></label
                             >
-                            <div
-                                class="flex items-center gap-4 bg-base-200/30 p-2 rounded-lg"
+                            <label
+                                class="label cursor-pointer justify-start gap-4 bg-base-200/30 p-4 rounded-lg"
                             >
-                                <label
-                                    class="label cursor-pointer flex-1 justify-center gap-2 py-2 rounded-md transition-colors has-[:checked]:bg-white has-[:checked]:shadow-sm"
-                                >
-                                    <span class="label-text font-medium"
-                                        >Standard</span
-                                    >
-                                    <input
-                                        type="checkbox"
-                                        name="is_mock"
-                                        class="toggle toggle-sm hidden"
-                                        id="mock-toggle"
-                                        onchange="toggleMockSection()"
-                                    />
-                                </label>
-                                <div class="h-6 w-px bg-base-300"></div>
-                                <label
-                                    for="mock-toggle"
-                                    class="cursor-pointer label-text font-medium text-primary hover:underline"
-                                    onclick="document.getElementById('mock-toggle').click()"
-                                    >Switch to Mock</label
-                                >
-                            </div>
-                            <div class="mt-4 flex items-center gap-2">
                                 <input
                                     type="checkbox"
                                     class="toggle toggle-primary"
-                                    id="mock-visible-toggle"
-                                    onchange="document.getElementById('mock-toggle').checked = this.checked; toggleMockSection()"
+                                    id="mock-toggle"
+                                    name="is_mock"
+                                    onchange="toggleMockSection()"
                                 />
-                                <span class="label-text font-bold"
-                                    >Enable Mock / Dummy Mode</span
-                                >
-                            </div>
-                            <p class="text-xs mt-2 opacity-70">
-                                Mock keys bypass the proxy and return a robust
-                                static JSON response. No tokens are charged.
-                            </p>
+                                <div>
+                                    <span class="label-text font-bold block"
+                                        >Mock / Dummy Mode</span
+                                    >
+                                    <span class="text-xs opacity-70"
+                                        >Returns static JSON response. No tokens
+                                        are charged.</span
+                                    >
+                                </div>
+                            </label>
                         </div>
 
                         <!-- Mock Editor -->
@@ -486,16 +466,9 @@ import Layout from "../layouts/Layout.astro";
 
         (window as any).toggleMockSection = () => {
             const check = (
-                document.getElementById(
-                    "mock-visible-toggle",
-                ) as HTMLInputElement
+                document.getElementById("mock-toggle") as HTMLInputElement
             ).checked;
             const section = document.getElementById("mock-config-section");
-            const mockToggle = document.getElementById(
-                "mock-toggle",
-            ) as HTMLInputElement;
-            if (mockToggle) mockToggle.checked = check;
-
             if (check) {
                 section?.classList.remove("hidden");
             } else {
@@ -516,13 +489,85 @@ import Layout from "../layouts/Layout.astro";
             (
                 document.getElementById("create-key-form") as HTMLFormElement
             ).reset();
-            (
-                document.getElementById(
-                    "mock-visible-toggle",
-                ) as HTMLInputElement
-            ).checked = false;
+            const mockToggle = document.getElementById(
+                "mock-toggle",
+            ) as HTMLInputElement;
+            if (mockToggle) mockToggle.checked = false;
             (window as any).toggleMockSection();
             (window as any).toggleModeInputs();
+        };
+
+        // --- Settings Logic ---
+        async function loadSettings() {
+            try {
+                const res = await fetch("/v1/config/settings", {
+                    cache: "no-store",
+                });
+                const data = await res.json();
+
+                const statusEl = document.getElementById("api-key-status");
+                if (statusEl) {
+                    statusEl.textContent = data.api_key_set
+                        ? "✓ API Key is configured"
+                        : "⚠ No API Key set";
+                    statusEl.classList.toggle("text-success", data.api_key_set);
+                    statusEl.classList.toggle(
+                        "text-warning",
+                        !data.api_key_set,
+                    );
+                }
+
+                const throttleEl = document.getElementById(
+                    "settings-throttle",
+                ) as HTMLInputElement;
+                if (throttleEl) throttleEl.value = data.throttle_rate || 100;
+            } catch (e) {
+                console.error("Failed to load settings", e);
+            }
+        }
+
+        (window as any).saveApiKey = async () => {
+            const input = document.getElementById(
+                "settings-api-key",
+            ) as HTMLInputElement;
+            const key = input.value.trim();
+            if (!key) {
+                alert("Please enter an API key");
+                return;
+            }
+
+            const res = await fetch("/v1/config/key", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ provider: "openai", key }),
+            });
+
+            if (res.ok) {
+                input.value = "";
+                alert("API Key saved successfully!");
+                loadSettings();
+            } else {
+                alert("Failed to save API Key");
+            }
+        };
+
+        (window as any).saveThrottle = async () => {
+            const input = document.getElementById(
+                "settings-throttle",
+            ) as HTMLInputElement;
+            const rate = parseInt(input.value) || 100;
+
+            const res = await fetch("/v1/config/settings", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ throttle_rate: rate }),
+            });
+
+            if (res.ok) {
+                alert("Throttle rate saved! Restart server to apply.");
+            } else {
+                alert("Failed to save throttle rate");
+            }
         };
 
         // --- Data Logic ---
@@ -711,9 +756,7 @@ import Layout from "../layouts/Layout.astro";
                 budget_limit: parseFloat(fd.get("budget_limit") as string),
                 budget_period: period,
                 is_mock: (
-                    document.getElementById(
-                        "mock-visible-toggle",
-                    ) as HTMLInputElement
+                    document.getElementById("mock-toggle") as HTMLInputElement
                 ).checked,
                 mock_config: fd.get("mock_config"),
             };

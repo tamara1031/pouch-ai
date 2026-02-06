@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	"pouch-ai/internal/security"
 )
@@ -16,15 +17,23 @@ func NewCredentialsManager(db *sql.DB) *CredentialsManager {
 	return &CredentialsManager{db: db}
 }
 
-// GetAPIKey retrieves and decrypts the API key for a provider.
+// GetAPIKey retrieves the API key for a provider.
+// Priority: 1) Environment variable (OPENAI_API_KEY), 2) Database.
 func (cm *CredentialsManager) GetAPIKey(provider string, password string) (string, error) {
+	// Check environment variable first (for container deployments)
+	if provider == "openai" {
+		if envKey := os.Getenv("OPENAI_API_KEY"); envKey != "" {
+			return envKey, nil
+		}
+	}
+
+	// Fallback to database
 	var encryptedKey, saltStr string
 	err := cm.db.QueryRow("SELECT encrypted_key, salt FROM credentials WHERE provider = ?", provider).Scan(&encryptedKey, &saltStr)
 	if err != nil {
 		return "", err
 	}
 
-	// For now, use a static password. In a real app, this should come from user input/env.
 	masterPassword := "pouch-default-insecure-master-password"
 
 	salt, err := base64Decode(saltStr)

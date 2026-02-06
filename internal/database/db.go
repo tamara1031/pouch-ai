@@ -45,9 +45,7 @@ func migrate(db *sql.DB) error {
 		encrypted_key TEXT NOT NULL,
 		salt TEXT NOT NULL
 	);
-	
-	
-	-- Index for seeking logs by time
+
 
 	CREATE TABLE IF NOT EXISTS app_keys (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -60,8 +62,14 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	e.Use(middleware.CORS())
 
 	// 5. Rate Limiter (Panic Guard)
-	// Allow 100 requests per minute burst. Generous for single user, tight for public.
-	limiter := rate.NewLimiter(rate.Limit(100.0/60.0), 10)
+	// Use THROTTLE_RATE env var (requests/minute), default 100.
+	throttleRate := 100
+	if envRate := os.Getenv("THROTTLE_RATE"); envRate != "" {
+		if r, err := strconv.Atoi(envRate); err == nil && r > 0 {
+			throttleRate = r
+		}
+	}
+	limiter := rate.NewLimiter(rate.Limit(float64(throttleRate)/60.0), 10)
 
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
