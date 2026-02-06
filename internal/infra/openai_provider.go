@@ -100,8 +100,6 @@ func (p *OpenAIProvider) EstimateUsage(model domain.Model, body []byte) (*domain
 }
 
 func (p *OpenAIProvider) ParseOutputUsage(model domain.Model, responseBody []byte, isStream bool) (int, error) {
-	respStr := string(responseBody)
-
 	if !isStream {
 		var resp struct {
 			Usage struct {
@@ -113,13 +111,16 @@ func (p *OpenAIProvider) ParseOutputUsage(model domain.Model, responseBody []byt
 		}
 	} else {
 		var fullContent strings.Builder
-		lines := strings.Split(respStr, "\n")
+		prefixData := []byte("data: ")
+		suffixDone := []byte("[DONE]")
+
+		lines := bytes.Split(responseBody, []byte("\n"))
 		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if !strings.HasPrefix(line, "data: ") || strings.HasSuffix(line, "[DONE]") {
+			line = bytes.TrimSpace(line)
+			if !bytes.HasPrefix(line, prefixData) || bytes.HasSuffix(line, suffixDone) {
 				continue
 			}
-			dataStr := strings.TrimPrefix(line, "data: ")
+			data := bytes.TrimPrefix(line, prefixData)
 			var chunk struct {
 				Choices []struct {
 					Delta struct {
@@ -127,7 +128,7 @@ func (p *OpenAIProvider) ParseOutputUsage(model domain.Model, responseBody []byt
 					} `json:"delta"`
 				} `json:"choices"`
 			}
-			if err := json.Unmarshal([]byte(dataStr), &chunk); err == nil {
+			if err := json.Unmarshal(data, &chunk); err == nil {
 				if len(chunk.Choices) > 0 {
 					fullContent.WriteString(chunk.Choices[0].Delta.Content)
 				}
@@ -140,7 +141,7 @@ func (p *OpenAIProvider) ParseOutputUsage(model domain.Model, responseBody []byt
 	}
 
 	// Fallback
-	return len(respStr) / 4, nil
+	return len(responseBody) / 4, nil
 }
 
 func (p *OpenAIProvider) ParseRequest(body []byte) (domain.Model, bool, error) {

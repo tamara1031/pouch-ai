@@ -42,3 +42,22 @@ func TestOpenAIProvider_ParseOutputUsage_NonStream(t *testing.T) {
 		t.Errorf("Expected 42 tokens, got %d", tokens)
 	}
 }
+
+func TestOpenAIProvider_ParseOutputUsage_Stream(t *testing.T) {
+	p := infra.NewOpenAIProvider("test-key", "", nil, &mockCounter{})
+
+	respBody := []byte("data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\" World!\"}}]}\n\ndata: [DONE]\n")
+
+	tokens, err := p.ParseOutputUsage(domain.Model("gpt-4"), respBody, true)
+	if err != nil {
+		t.Fatalf("Failed to parse output usage: %v", err)
+	}
+
+	// mockCounter returns len(text) / 4
+	// Text is "Hello World!" (12 chars)
+	// 12 / 4 = 3
+	expected := 3
+	if tokens != expected {
+		t.Errorf("Expected %d tokens, got %d", expected, tokens)
+	}
+}
