@@ -33,6 +33,8 @@ type Provider interface {
 	EstimateUsage(model Model, requestBody []byte) (*Usage, error)
 	// Output tokens often come from the response body (JSON usage or stream parsing)
 	ParseOutputUsage(model Model, responseBody []byte, isStream bool) (int, error)
+	// ProcessStreamChunk extracts content from a single stream chunk (e.g. SSE line)
+	ProcessStreamChunk(chunk []byte) (string, error)
 	// ParseRequest extracts generic info from provider-specific request body
 	ParseRequest(body []byte) (Model, bool, error)
 
