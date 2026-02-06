@@ -61,6 +61,13 @@ func (h *ProxyHandler) Proxy(c echo.Context) error {
 	}
 	defer resp.Body.Close()
 
+	// Copy headers
+	for k, vv := range resp.Header {
+		for _, v := range vv {
+			c.Response().Header().Add(k, v)
+		}
+	}
+
 	// Handle response
 	if isStream {
 		c.Response().Header().Set("Content-Type", "text/event-stream")

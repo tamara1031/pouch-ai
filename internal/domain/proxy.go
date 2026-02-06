@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"io"
+	"net/http"
 )
 
 type Request struct {
@@ -16,6 +17,7 @@ type Request struct {
 
 type Response struct {
 	StatusCode   int
+	Header       http.Header
 	Body         io.ReadCloser
 	PromptTokens int
 	OutputTokens int

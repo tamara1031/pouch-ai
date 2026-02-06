@@ -51,6 +51,7 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 
 		return &domain.Response{
 			StatusCode:   resp.StatusCode,
+			Header:       resp.Header,
 			Body:         io.NopCloser(bytes.NewBuffer(body)),
 			PromptTokens: inputUsage.InputTokens,
 			OutputTokens: outputTokens,
@@ -72,6 +73,7 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 	// Create a wrapper that will update the database on Close()
 	return &domain.Response{
 		StatusCode:   resp.StatusCode,
+		Header:       resp.Header,
 		Body:         resp.Body, // TODO: Wrap in CountingReader
 		PromptTokens: inputUsage.InputTokens,
 		TotalCost:    inputCost,
