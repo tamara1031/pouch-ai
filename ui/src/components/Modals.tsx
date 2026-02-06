@@ -7,6 +7,7 @@ export default function Modals() {
     const [createMode, setCreateMode] = useState<"prepaid" | "subscription">("prepaid");
     const [showMock, setShowMock] = useState(false);
     const [showEditMock, setShowEditMock] = useState(false);
+    const [newKeyCopied, setNewKeyCopied] = useState(false);
 
     const createModalRef = useRef<HTMLInputElement>(null);
     const editModalRef = useRef<HTMLInputElement>(null);
@@ -272,10 +273,24 @@ export default function Modals() {
 
                     <div class="bg-black/20 p-4 rounded-xl border border-white/5 flex flex-col gap-3 mb-8">
                         <code class="break-all font-mono font-bold text-xl text-primary tracking-tight">{newKeyRaw || "pk-xxxxxxxx"}</code>
-                        <button class="btn btn-sm btn-ghost bg-white/5 hover:bg-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest h-9" onClick={() => {
-                            if (newKeyRaw) navigator.clipboard.writeText(newKeyRaw);
+                        <button class={`btn btn-sm btn-ghost bg-white/5 hover:bg-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest h-9 transition-all ${newKeyCopied ? 'text-success bg-success/10' : ''}`} onClick={() => {
+                            if (newKeyRaw) {
+                                navigator.clipboard.writeText(newKeyRaw)
+                                    .then(() => {
+                                        setNewKeyCopied(true);
+                                        setTimeout(() => setNewKeyCopied(false), 2000);
+                                    })
+                                    .catch(err => console.error("Failed to copy:", err));
+                            }
                         }}>
-                            Copy to Clipboard
+                            {newKeyCopied ? (
+                                <span class="flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                    Copied!
+                                </span>
+                            ) : (
+                                "Copy to Clipboard"
+                            )}
                         </button>
                     </div>
 
