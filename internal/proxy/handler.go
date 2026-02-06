@@ -93,9 +93,6 @@ func (h *Handler) Handle(c echo.Context) error {
 	maxCost := estimatedInputCost + estimatedOutputCost
 
 	// 3. Deposit (Reserve) - REMOVED (Handled by strict pre-check or just post-payment in this version)
-	// if err := h.Budget.Reserve(maxCost); err != nil {
-	// 	return echo.NewHTTPError(http.StatusPaymentRequired, fmt.Sprintf("Budget exceeded. Required: $%.4f", maxCost))
-	// }
 
 	// Prepare for Refund calculations
 	startTime := time.Now()
@@ -168,12 +165,6 @@ func (h *Handler) Handle(c echo.Context) error {
 	finalCost := estimatedInputCost + actualOutputCost
 
 	// 4. Refund Logic - REMOVED
-	// refundAmount := maxCost - finalCost
-	// if refundAmount > 0 {
-	// 	if err := h.Budget.Refund(refundAmount); err != nil {
-	// 		log.Printf("Failed to refund: %v", err)
-	// 	}
-	// }
 	refundAmount := 0.0
 
 	log.Printf("Req: %s | max: $%.4f | actual: $%.4f | refund: $%.4f | duration: %v | out_tok: %d",

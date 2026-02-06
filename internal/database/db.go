@@ -46,22 +46,8 @@ func migrate(db *sql.DB) error {
 		salt TEXT NOT NULL
 	);
 	
-	CREATE TABLE IF NOT EXISTS audit_logs (
-		request_id TEXT PRIMARY KEY,
-		timestamp INTEGER NOT NULL,
-		model TEXT NOT NULL,
-		input_tokens INTEGER,
-		output_tokens INTEGER,
-		total_cost REAL
-	);
-
-	CREATE TABLE IF NOT EXISTS system_config (
-		key TEXT PRIMARY KEY,
-		value TEXT NOT NULL
-	);
 	
 	-- Index for seeking logs by time
-	CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);
 
 	CREATE TABLE IF NOT EXISTS app_keys (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
