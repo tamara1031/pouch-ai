@@ -93,72 +93,69 @@ export default function KeyCard({ keyData, onEdit, onRevoke }: Props) {
         : "Unlimited";
 
     return (
-        <div class="group relative overflow-hidden bg-white/5 backdrop-blur-2xl border border-white/5 rounded-[2rem] transition-all duration-700 hover:bg-white/[0.08] hover:border-white/10 hover:shadow-2xl hover:shadow-primary/5">
-            {/* Subtle Gradient Overlay */}
-            <div class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-white/[0.01] opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none"></div>
-
-            <div class="p-8 md:p-10 relative">
-                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
-                    <div class="flex-1 space-y-4">
-                        <div class="flex flex-wrap items-center gap-4">
-                            <h2 class="text-2xl font-black text-white tracking-tight group-hover:text-primary transition-colors duration-500">{name}</h2>
-                            <div class="px-2 py-0.5 rounded-md bg-white/5 text-[9px] font-black uppercase text-white/20 tracking-[0.2em] border border-white/5">{provider || "openai"}</div>
+        <div class="group relative overflow-hidden bg-base-200/50 border border-white/5 rounded-2xl transition-all hover:bg-base-200/80">
+            <div class="p-6 relative">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                    <div class="flex-1 space-y-3">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <h2 class="text-xl font-bold text-white tracking-tight">{name}</h2>
+                            <div class="px-2 py-0.5 rounded bg-white/5 text-[9px] font-bold uppercase text-white/40 tracking-wider border border-white/5">{provider || "openai"}</div>
                             {statusBadge}
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
                             <div class="relative group/copy">
-                                <code class="text-sm font-mono font-medium text-white/40 bg-black/40 px-4 py-2 rounded-xl border border-white/5 block group-hover/copy:text-white/60 transition-colors">
+                                <code class="text-xs font-mono text-white/40 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5 block group-hover/copy:text-white/60 transition-colors">
                                     {prefix}••••••••
                                 </code>
                                 <button
                                     onClick={handleCopy}
-                                    class="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-white/5 hover:bg-white/10 opacity-0 group-hover/copy:opacity-100 transition-all duration-300"
+                                    class="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded bg-white/5 hover:bg-white/10 opacity-0 group-hover/copy:opacity-100 transition-all"
                                     title="Copy prefix"
                                 >
                                     {copied ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
                                     ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
                                     )}
                                 </button>
                                 {copied && (
-                                    <div class="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 bg-success text-white text-[10px] font-black rounded-full animate-in fade-in zoom-in slide-in-from-bottom-2 duration-300">COPIED</div>
+                                    <div class="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-success text-white text-[9px] font-bold rounded animate-in fade-in zoom-in slide-in-from-bottom-1 duration-200">COPIED</div>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    <div class="w-full lg:w-auto grid grid-cols-2 md:grid-cols-4 lg:flex lg:items-center gap-10">
+                    <div class="w-full lg:w-auto grid grid-cols-2 md:grid-cols-4 lg:flex lg:items-center gap-8">
                         <div class="space-y-1">
-                            <span class="text-[9px] font-black uppercase tracking-[0.2em] text-white/20">Spending</span>
-                            <div class="flex items-baseline gap-1.5">
-                                <span class="text-xl font-black text-white tracking-tight">${budget_usage.toFixed(2)}</span>
+                            <span class="text-[9px] font-bold uppercase tracking-wider text-white/20">Usage</span>
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-lg font-bold text-white tracking-tight">${budget_usage.toFixed(2)}</span>
                                 <span class="text-[10px] font-medium text-white/20">/ {budget_limit > 0 ? "$" + budget_limit.toFixed(0) : "∞"}</span>
                             </div>
-                            <div class="w-24 h-1.5 bg-white/5 rounded-full overflow-hidden mt-2">
-                                <div class={`h-full rounded-full bg-gradient-to-r ${barColor} shadow-[0_0_10px_rgba(var(--p-rgb),0.3)] transition-all duration-1000`} style={{ width: `${usagePercent}%` }}></div>
+                            <div class="w-20 h-1 bg-white/5 rounded-full overflow-hidden mt-1.5">
+                                <div class={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-1000`} style={{ width: `${usagePercent}%` }}></div>
                             </div>
                         </div>
 
                         <div class="space-y-1">
-                            <span class="text-[9px] font-black uppercase tracking-[0.2em] text-white/20">Throughput</span>
-                            <div class="text-xl font-black text-white tracking-tight font-mono">{rateLimitText}</div>
+                            <span class="text-[9px] font-bold uppercase tracking-wider text-white/20">Rate</span>
+                            <div class="text-lg font-bold text-white tracking-tight font-mono">{rateLimitText}</div>
                         </div>
 
                         <div class="space-y-1 hidden md:block">
-                            <span class="text-[9px] font-black uppercase tracking-[0.2em] text-white/20">Lifecycle</span>
-                            <div class={`text-base font-bold tracking-tight ${isExpired ? 'text-error' : 'text-white/60'}`}>{expiresText}</div>
+                            <span class="text-[9px] font-bold uppercase tracking-wider text-white/20">Expiry</span>
+                            <div class={`text-sm font-bold tracking-tight ${isExpired ? 'text-error' : 'text-white/60'}`}>{expiresText}</div>
                         </div>
 
-                        <div class="flex flex-row lg:flex-col gap-2 justify-end items-center lg:items-end flex-1 sm:flex-none">
+                        <div class="flex flex-row lg:flex-row gap-2 justify-end items-center flex-1 sm:flex-none">
                             <button
-                                class="btn btn-sm h-11 px-5 rounded-xl bg-white/5 border-none text-[9px] font-black uppercase tracking-[0.2em] text-white/40 hover:text-white hover:bg-white/10 hover:shadow-lg hover:shadow-white/5 transition-all"
+                                class="btn btn-sm h-9 px-4 rounded-lg bg-white/5 border-none text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white hover:bg-white/10 transition-all"
                                 onClick={() => onEdit(keyData)}
                             >
-                                Configure
+                                Edit
                             </button>
                             <button
-                                class="btn btn-sm h-11 px-5 rounded-xl bg-error/5 hover:bg-error/10 border-none text-[9px] font-black uppercase tracking-[0.2em] text-error/40 hover:text-error transition-all"
+                                class="btn btn-sm h-9 px-4 rounded-lg bg-error/5 hover:bg-error/10 border-none text-[10px] font-bold uppercase tracking-wider text-error/40 hover:text-error transition-all"
                                 onClick={() => onRevoke(id)}
                             >
                                 Revoke
