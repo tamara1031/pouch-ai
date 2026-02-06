@@ -1,0 +1,27 @@
+# Binaries
+pouch
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Data
+data/
+*.db
+*.db-journal
+*.db-wal
+
+# Build artifacts
+ui/dist/
+ui/node_modules/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Environment
+.env
