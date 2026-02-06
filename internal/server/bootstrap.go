@@ -6,15 +6,14 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"golang.org/x/time/rate"
 
 	"pouch-ai/internal/api/http/handler"
 	pouch_mw "pouch-ai/internal/api/http/middleware"
 	"pouch-ai/internal/app"
+	app_mw "pouch-ai/internal/app/middleware"
 	"pouch-ai/internal/database"
 	"pouch-ai/internal/domain/provider"
 	"pouch-ai/internal/infra/db"
@@ -54,9 +53,11 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	executionHandler := infra_proxy.NewExecutionHandler()
 	proxyService := app.NewProxyService(
 		executionHandler,
-		app.NewRateLimitMiddleware(),
-		app.NewMockMiddleware(),
-		app.NewUsageTrackingMiddleware(keyService),
+		app_mw.NewRateLimitMiddleware(),
+		app_mw.NewBudgetResetMiddleware(keyService),
+		app_mw.NewKeyValidationMiddleware(),
+		app_mw.NewUsageTrackingMiddleware(keyService),
+		app_mw.NewMockMiddleware(),
 	)
 
 	// 4. Initialize Handlers
@@ -67,27 +68,9 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	e := echo.New()
 	e.HideBanner = true
 
-	e.Use(middleware.Logger())
+	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
-
-	// 6. Global Rate Limiter (Panic Guard)
-	throttleRate := 100
-	if envRate := os.Getenv("THROTTLE_RATE"); envRate != "" {
-		if r, err := strconv.Atoi(envRate); err == nil && r > 0 {
-			throttleRate = r
-		}
-	}
-	limiter := rate.NewLimiter(rate.Limit(float64(throttleRate)/60.0), 10)
-
-	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			if !limiter.Allow() {
-				return echo.NewHTTPError(http.StatusTooManyRequests, "Panic Guard: Rate limit exceeded")
-			}
-			return next(c)
-		}
-	})
 
 	// 7. Routes
 	api := e.Group("/v1")

@@ -114,7 +114,7 @@ export default function Modals() {
             {/* Create Key Modal */}
             <input type="checkbox" id="create-key-modal" class="modal-toggle" ref={createModalRef} />
             <div class="modal backdrop-blur-md">
-                <div class="modal-box w-11/12 max-w-4xl p-0 overflow-hidden bg-base-100/95 backdrop-blur-xl border border-base-content/5 rounded-2xl shadow-2xl">
+                <div class="modal-box w-11/12 max-w-4xl p-0 bg-base-100/95 backdrop-blur-xl border border-base-content/5 rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
                     <div class="p-6 border-b border-base-content/5 flex justify-between items-center bg-base-200/50">
                         <div>
                             <h3 class="font-bold text-2xl">Create API Key</h3>
@@ -123,8 +123,8 @@ export default function Modals() {
                         <label for="create-key-modal" class="btn btn-sm btn-circle btn-ghost text-base-content/50">✕</label>
                     </div>
 
-                    <form id="create-key-form" class="p-8 flex flex-col gap-8" onSubmit={handleCreateSubmit}>
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                    <form id="create-key-form" class="p-6 md:p-8 flex flex-col gap-8" onSubmit={handleCreateSubmit}>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
                             {/* General Settings */}
                             <div class="flex flex-col gap-6">
                                 <h4 class="text-xs font-bold uppercase tracking-wider text-primary/70">General Settings</h4>
@@ -235,7 +235,7 @@ export default function Modals() {
             {/* Edit Key Modal */}
             <input type="checkbox" id="edit-key-modal" class="modal-toggle" ref={editModalRef} />
             <div class="modal backdrop-blur-md">
-                <div class="modal-box w-11/12 max-w-2xl bg-base-100/95 backdrop-blur-xl border border-base-content/5 rounded-2xl shadow-2xl p-0 overflow-hidden">
+                <div class="modal-box w-11/12 max-w-2xl bg-base-100/95 backdrop-blur-xl border border-base-content/5 rounded-2xl shadow-2xl p-0 overflow-y-auto max-h-[90vh]">
                     <div class="p-6 border-b border-base-content/5 bg-base-200/50 flex justify-between items-center">
                         <h3 class="font-bold text-xl">Edit Access Key</h3>
                         <label for="edit-key-modal" class="btn btn-sm btn-circle btn-ghost text-base-content/50">✕</label>
@@ -295,9 +295,12 @@ export default function Modals() {
 
             {/* New Key Display Modal */}
             <input type="checkbox" id="new-key-display-modal" class="modal-toggle" ref={newKeyModalRef} />
-            <div class="modal">
-                <div class="modal-box relative">
-                    <h3 class="font-bold text-lg text-success">Key Generated!</h3>
+            <div class="modal backdrop-blur-md">
+                <div class="modal-box relative max-w-lg w-11/12 p-8 bg-base-100/95 backdrop-blur-xl border border-base-content/5 rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
+                    <h3 class="font-bold text-xl text-success flex items-center gap-2 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Key Generated Successfully!
+                    </h3>
                     <p class="py-4">Please copy your API key now.<br /><span class="font-bold text-error">It will not be shown again.</span></p>
                     <div class="bg-base-200 p-4 rounded-lg flex justify-between items-center">
                         <code class="break-all font-mono font-bold text-lg">{newKeyRaw || "pk-xxxxxxxx"}</code>

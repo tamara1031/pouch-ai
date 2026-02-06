@@ -72,21 +72,6 @@ func (s *KeyService) VerifyKey(ctx context.Context, rawKey string) (*key.Key, er
 		return nil, fmt.Errorf("invalid API key")
 	}
 
-	if k.IsExpired() {
-		return nil, fmt.Errorf("key expired")
-	}
-
-	if k.NeedsReset() {
-		k.ResetUsage()
-		if err := s.repo.ResetUsage(ctx, k.ID, k.LastResetAt); err != nil {
-			return nil, err
-		}
-	}
-
-	if k.IsBudgetExceeded() {
-		return nil, fmt.Errorf("budget limit exceeded")
-	}
-
 	return k, nil
 }
 
@@ -116,6 +101,11 @@ func (s *KeyService) UpdateKey(ctx context.Context, id int64, name string, provi
 
 func (s *KeyService) DeleteKey(ctx context.Context, id int64) error {
 	return s.repo.Delete(ctx, key.ID(id))
+}
+
+func (s *KeyService) ResetKeyUsage(ctx context.Context, k *key.Key) error {
+	k.ResetUsage()
+	return s.repo.ResetUsage(ctx, k.ID, k.LastResetAt)
 }
 
 func (s *KeyService) IncrementUsage(ctx context.Context, id key.ID, amount float64) error {
