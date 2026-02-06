@@ -7,16 +7,28 @@ import (
 	"encoding/hex"
 	"fmt"
 	"pouch-ai/internal/domain"
+	"sync"
 	"time"
 )
+
+type cachedKey struct {
+	key       *domain.Key
+	expiresAt time.Time
+}
 
 type KeyService struct {
 	repo     domain.Repository
 	registry domain.Registry
+	cache    map[string]cachedKey
+	cacheMu  sync.RWMutex
 }
 
 func NewKeyService(repo domain.Repository, registry domain.Registry) *KeyService {
-	return &KeyService{repo: repo, registry: registry}
+	return &KeyService{
+		repo:     repo,
+		registry: registry,
+		cache:    make(map[string]cachedKey),
+	}
 }
 
 func (s *KeyService) CreateKey(ctx context.Context, name string, provider string, expiresAt *int64, budgetLimit float64, budgetPeriod string, isMock bool, mockConfig string, rateLimit int, ratePeriod string) (string, *domain.Key, error) {
@@ -71,6 +83,17 @@ func (s *KeyService) CreateKey(ctx context.Context, name string, provider string
 
 func (s *KeyService) VerifyKey(ctx context.Context, rawKey string) (*domain.Key, error) {
 	hash := s.hashKey(rawKey)
+
+	s.cacheMu.RLock()
+	if entry, ok := s.cache[hash]; ok {
+		if time.Now().Before(entry.expiresAt) {
+			copied := s.copyKey(entry.key)
+			s.cacheMu.RUnlock()
+			return copied, nil
+		}
+	}
+	s.cacheMu.RUnlock()
+
 	k, err := s.repo.GetByHash(ctx, hash)
 	if err != nil {
 		return nil, err
@@ -78,6 +101,13 @@ func (s *KeyService) VerifyKey(ctx context.Context, rawKey string) (*domain.Key,
 	if k == nil {
 		return nil, fmt.Errorf("invalid API key")
 	}
+
+	s.cacheMu.Lock()
+	s.cache[hash] = cachedKey{
+		key:       s.copyKey(k),
+		expiresAt: time.Now().Add(1 * time.Minute),
+	}
+	s.cacheMu.Unlock()
 
 	return k, nil
 }
@@ -118,20 +148,56 @@ func (s *KeyService) UpdateKey(ctx context.Context, id int64, name string, provi
 		return err
 	}
 
-	return s.repo.Update(ctx, k)
+	if err := s.repo.Update(ctx, k); err != nil {
+		return err
+	}
+
+	s.cacheMu.Lock()
+	delete(s.cache, k.KeyHash)
+	s.cacheMu.Unlock()
+
+	return nil
 }
 
 func (s *KeyService) DeleteKey(ctx context.Context, id int64) error {
-	return s.repo.Delete(ctx, domain.ID(id))
+	k, _ := s.repo.GetByID(ctx, domain.ID(id))
+	if err := s.repo.Delete(ctx, domain.ID(id)); err != nil {
+		return err
+	}
+	if k != nil {
+		s.cacheMu.Lock()
+		delete(s.cache, k.KeyHash)
+		s.cacheMu.Unlock()
+	}
+	return nil
 }
 
 func (s *KeyService) ResetKeyUsage(ctx context.Context, k *domain.Key) error {
 	k.ResetUsage()
-	return s.repo.ResetUsage(ctx, k.ID, k.LastResetAt)
+	if err := s.repo.ResetUsage(ctx, k.ID, k.LastResetAt); err != nil {
+		return err
+	}
+	s.cacheMu.Lock()
+	if entry, ok := s.cache[k.KeyHash]; ok {
+		entry.key.ResetUsage()
+		entry.key.LastResetAt = k.LastResetAt
+	}
+	s.cacheMu.Unlock()
+	return nil
 }
 
-func (s *KeyService) IncrementUsage(ctx context.Context, id domain.ID, amount float64) error {
-	return s.repo.IncrementUsage(ctx, id, amount)
+func (s *KeyService) IncrementUsage(ctx context.Context, key *domain.Key, amount float64) error {
+	if err := s.repo.IncrementUsage(ctx, key.ID, amount); err != nil {
+		return err
+	}
+
+	s.cacheMu.Lock()
+	if entry, ok := s.cache[key.KeyHash]; ok {
+		entry.key.Budget.Usage += amount
+	}
+	s.cacheMu.Unlock()
+
+	return nil
 }
 
 func (s *KeyService) GetProviderUsage(ctx context.Context) (map[string]float64, error) {
@@ -162,4 +228,16 @@ func (s *KeyService) hashKey(key string) string {
 	h := sha256.New()
 	h.Write([]byte(key))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func (s *KeyService) copyKey(k *domain.Key) *domain.Key {
+	if k == nil {
+		return nil
+	}
+	copy := *k
+	if k.ExpiresAt != nil {
+		t := *k.ExpiresAt
+		copy.ExpiresAt = &t
+	}
+	return &copy
 }
