@@ -11,6 +11,10 @@ data/
 *.db-journal
 *.db-wal
 
+# Test Data
+data_test*/
+test_data*/
+
 # Build artifacts
 ui/dist/
 ui/node_modules/
@@ -25,3 +29,6 @@ Thumbs.db
 
 # Environment
 .env
+
+# build output
+pouch

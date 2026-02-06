@@ -12,14 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"pouch-ai/internal/budget"
 	"pouch-ai/internal/token"
 
 	"github.com/labstack/echo/v4"
 )
 
 type Handler struct {
-	Budget  *budget.Manager
 	Token   *token.Counter
 	Pricing *Pricing
 	Target  *url.URL
@@ -29,13 +27,12 @@ type Handler struct {
 	UsageCallback func(c echo.Context, cost float64)
 }
 
-func NewHandler(b *budget.Manager, t *token.Counter, p *Pricing, targetStr string, creds *CredentialsManager) (*Handler, error) {
+func NewHandler(t *token.Counter, p *Pricing, targetStr string, creds *CredentialsManager) (*Handler, error) {
 	target, err := url.Parse(targetStr)
 	if err != nil {
 		return nil, err
 	}
 	return &Handler{
-		Budget:  b,
 		Token:   t,
 		Pricing: p,
 		Target:  target,
@@ -95,10 +92,10 @@ func (h *Handler) Handle(c echo.Context) error {
 	estimatedOutputCost := float64(req.MaxTokens) / 1000.0 * price.Output
 	maxCost := estimatedInputCost + estimatedOutputCost
 
-	// 3. Deposit (Reserve)
-	if err := h.Budget.Reserve(maxCost); err != nil {
-		return echo.NewHTTPError(http.StatusPaymentRequired, fmt.Sprintf("Budget exceeded. Required: $%.4f", maxCost))
-	}
+	// 3. Deposit (Reserve) - REMOVED (Handled by strict pre-check or just post-payment in this version)
+	// if err := h.Budget.Reserve(maxCost); err != nil {
+	// 	return echo.NewHTTPError(http.StatusPaymentRequired, fmt.Sprintf("Budget exceeded. Required: $%.4f", maxCost))
+	// }
 
 	// Prepare for Refund calculations
 	startTime := time.Now()
@@ -108,13 +105,10 @@ func (h *Handler) Handle(c echo.Context) error {
 	proxy := httputil.NewSingleHostReverseProxy(h.Target)
 	originalDirector := proxy.Director
 
-	// Error handler to ensure refund on network failure
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		log.Printf("Proxy error: %v", err)
-		// Full API failure -> Refund everything
-		if rErr := h.Budget.Refund(maxCost); rErr != nil {
-			log.Printf("Failed to refund on proxy error: %v", rErr)
-		}
+		// No refund needed as we charge after usage now.
+		// Or if we implemented reservation, we would refund here.
 		w.WriteHeader(http.StatusBadGateway)
 	}
 
@@ -173,15 +167,14 @@ func (h *Handler) Handle(c echo.Context) error {
 	actualOutputCost := float64(actualOutputTokens) / 1000.0 * price.Output
 	finalCost := estimatedInputCost + actualOutputCost
 
-	// If something went wrong during streaming (e.g. read error), actualOutputTokens might be partial.
-	// We charge for what was consumed.
-
-	refundAmount := maxCost - finalCost
-	if refundAmount > 0 {
-		if err := h.Budget.Refund(refundAmount); err != nil {
-			log.Printf("Failed to refund: %v", err)
-		}
-	}
+	// 4. Refund Logic - REMOVED
+	// refundAmount := maxCost - finalCost
+	// if refundAmount > 0 {
+	// 	if err := h.Budget.Refund(refundAmount); err != nil {
+	// 		log.Printf("Failed to refund: %v", err)
+	// 	}
+	// }
+	refundAmount := 0.0
 
 	log.Printf("Req: %s | max: $%.4f | actual: $%.4f | refund: $%.4f | duration: %v | out_tok: %d",
 		req.Model, maxCost, finalCost, refundAmount, time.Since(startTime), actualOutputTokens)

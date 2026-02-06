@@ -14,21 +14,24 @@ type KeyManager struct {
 }
 
 type KeyInfo struct {
-	ID          int64   `json:"id"`
-	Name        string  `json:"name"`
-	Prefix      string  `json:"prefix"`
-	ExpiresAt   *int64  `json:"expires_at"` // Unix timestamp
-	BudgetLimit float64 `json:"budget_limit"`
-	BudgetUsage float64 `json:"budget_usage"`
-	CreatedAt   int64   `json:"created_at"`
+	ID           int64   `json:"id"`
+	Name         string  `json:"name"`
+	Prefix       string  `json:"prefix"`
+	ExpiresAt    *int64  `json:"expires_at"` // Unix timestamp
+	BudgetLimit  float64 `json:"budget_limit"`
+	BudgetUsage  float64 `json:"budget_usage"`
+	BudgetPeriod string  `json:"budget_period"` // "monthly", "weekly", "none"
+	IsMock       bool    `json:"is_mock"`
+	MockConfig   string  `json:"mock_config"` // JSON string
+	CreatedAt    int64   `json:"created_at"`
 }
 
 func NewKeyManager(db *sql.DB) *KeyManager {
 	return &KeyManager{db: db}
 }
 
-// GenerateKey creates a new API key, stores its hash, and returns the plain key.
-func (km *KeyManager) GenerateKey(name string, expiresAt *int64, budgetLimit float64) (string, error) {
+// GenerateKey creates a new API key.
+func (km *KeyManager) GenerateKey(name string, expiresAt *int64, budgetLimit float64, period string, isMock bool, mockConfig string) (string, error) {
 	// Generate random key
 	bytes := make([]byte, 24)
 	if _, err := rand.Read(bytes); err != nil {
@@ -45,9 +48,9 @@ func (km *KeyManager) GenerateKey(name string, expiresAt *int64, budgetLimit flo
 	createdAt := time.Now().Unix()
 
 	_, err := km.db.Exec(`
-		INSERT INTO app_keys (name, key_hash, prefix, expires_at, budget_limit, budget_usage, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, name, hashStr, prefix, expiresAt, budgetLimit, 0, createdAt)
+		INSERT INTO app_keys (name, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, name, hashStr, prefix, expiresAt, budgetLimit, 0, period, createdAt, isMock, mockConfig, createdAt)
 
 	if err != nil {
 		return "", fmt.Errorf("failed to insert key: %w", err)
@@ -56,18 +59,19 @@ func (km *KeyManager) GenerateKey(name string, expiresAt *int64, budgetLimit flo
 	return key, nil
 }
 
-// VerifyKey checks if a key is valid and within budget/expiration.
+// VerifyKey checks if a key is valid, handles auto-renew, and returns info.
 func (km *KeyManager) VerifyKey(key string) (*KeyInfo, error) {
 	hash := sha256.Sum256([]byte(key))
 	hashStr := hex.EncodeToString(hash[:])
 
 	var info KeyInfo
 	var expiresAt sql.NullInt64
+	var lastResetAt int64
 
 	err := km.db.QueryRow(`
-		SELECT id, name, prefix, expires_at, budget_limit, budget_usage, created_at
+		SELECT id, name, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, created_at
 		FROM app_keys WHERE key_hash = ?
-	`, hashStr).Scan(&info.ID, &info.Name, &info.Prefix, &expiresAt, &info.BudgetLimit, &info.BudgetUsage, &info.CreatedAt)
+	`, hashStr).Scan(&info.ID, &info.Name, &info.Prefix, &expiresAt, &info.BudgetLimit, &info.BudgetUsage, &info.BudgetPeriod, &lastResetAt, &info.IsMock, &info.MockConfig, &info.CreatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -76,14 +80,45 @@ func (km *KeyManager) VerifyKey(key string) (*KeyInfo, error) {
 		return nil, err
 	}
 
+	now := time.Now().Unix()
+
+	// Check Expiration
 	if expiresAt.Valid {
 		val := expiresAt.Int64
 		info.ExpiresAt = &val
-		if time.Now().Unix() > val {
+		if now > val {
 			return nil, fmt.Errorf("key expired")
 		}
 	}
 
+	// Handle Auto-Renew (Lazy Reset)
+	if info.BudgetPeriod != "" && info.BudgetPeriod != "none" {
+		resetNeeded := false
+		switch info.BudgetPeriod {
+		case "weekly":
+			if now > lastResetAt+(7*24*3600) {
+				resetNeeded = true
+			}
+		case "monthly":
+			if now > lastResetAt+(30*24*3600) {
+				resetNeeded = true
+			}
+		}
+
+		if resetNeeded {
+			// Reset usage
+			_, err := km.db.Exec("UPDATE app_keys SET budget_usage = 0, last_reset_at = ? WHERE id = ?", now, info.ID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to reset budget: %w", err)
+			}
+			info.BudgetUsage = 0
+			// We should technically update local 'lastResetAt' but we don't return it
+		}
+	}
+
+	// Check Budget (Standard keys only? Or mocks too? Let's assume mocks obey limits too if set, or ignore? User said "dummy key", maybe unlimited? But "mock" is just a mode. If they set a budget, we obey it.)
+	// Actually, if it's a mock key for testing, maybe we want to test "Budget Exceeded" scenario?
+	// So we should enforce it.
 	if info.BudgetLimit > 0 && info.BudgetUsage >= info.BudgetLimit {
 		return nil, fmt.Errorf("budget limit exceeded")
 	}
@@ -98,17 +133,17 @@ func (km *KeyManager) IncrementUsage(keyID int64, cost float64) error {
 }
 
 func (km *KeyManager) ListKeys() ([]KeyInfo, error) {
-	rows, err := km.db.Query("SELECT id, name, prefix, expires_at, budget_limit, budget_usage, created_at FROM app_keys ORDER BY created_at DESC")
+	rows, err := km.db.Query("SELECT id, name, prefix, expires_at, budget_limit, budget_usage, budget_period, is_mock, mock_config, created_at FROM app_keys ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var keys []KeyInfo
+	keys := make([]KeyInfo, 0)
 	for rows.Next() {
 		var k KeyInfo
 		var expiresAt sql.NullInt64
-		if err := rows.Scan(&k.ID, &k.Name, &k.Prefix, &expiresAt, &k.BudgetLimit, &k.BudgetUsage, &k.CreatedAt); err != nil {
+		if err := rows.Scan(&k.ID, &k.Name, &k.Prefix, &expiresAt, &k.BudgetLimit, &k.BudgetUsage, &k.BudgetPeriod, &k.IsMock, &k.MockConfig, &k.CreatedAt); err != nil {
 			return nil, err
 		}
 		if expiresAt.Valid {
@@ -118,6 +153,18 @@ func (km *KeyManager) ListKeys() ([]KeyInfo, error) {
 		keys = append(keys, k)
 	}
 	return keys, nil
+}
+
+// UpdateKey updates modifiable fields of a key.
+func (km *KeyManager) UpdateKey(id int, name string, budgetLimit float64, isMock bool, mockConfig string) error {
+	// Expiration and Period are immutable to prevent logic tampering after creation.
+	// BudgetLimit can be changed (e.g. to top up).
+	_, err := km.db.Exec(`
+		UPDATE app_keys 
+		SET name = ?, budget_limit = ?, is_mock = ?, mock_config = ?
+		WHERE id = ?
+	`, name, budgetLimit, isMock, mockConfig, id)
+	return err
 }
 
 func (km *KeyManager) RevokeKey(id int) error {

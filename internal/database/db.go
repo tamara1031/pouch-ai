@@ -71,6 +71,10 @@ func migrate(db *sql.DB) error {
 		expires_at INTEGER,
 		budget_limit REAL DEFAULT 0,
 		budget_usage REAL DEFAULT 0,
+		budget_period TEXT,
+		last_reset_at INTEGER,
+		is_mock BOOLEAN DEFAULT 0,
+		mock_config TEXT,
 		created_at INTEGER NOT NULL
 	);
 	`

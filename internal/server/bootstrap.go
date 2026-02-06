@@ -11,7 +11,6 @@ import (
 	"golang.org/x/time/rate"
 
 	"pouch-ai/internal/auth"
-	"pouch-ai/internal/budget"
 	"pouch-ai/internal/database"
 	"pouch-ai/internal/proxy"
 	"pouch-ai/internal/token"
@@ -30,7 +29,6 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	}
 
 	// 2. Dependencies
-	budg := budget.NewManager(database.DB)
 	tok := token.NewCounter()
 	creds := proxy.NewCredentialsManager(database.DB)
 	keyMgr := auth.NewKeyManager(database.DB)
@@ -40,7 +38,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	}
 
 	// 3. Proxy Handler
-	prox, err := proxy.NewHandler(budg, tok, pric, targetURL, creds)
+	prox, err := proxy.NewHandler(tok, pric, targetURL, creds)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init proxy: %w", err)
 	}
@@ -107,6 +105,11 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid API Key")
 			}
 
+			if info.IsMock {
+				// Mock Mode
+				return c.JSONBlob(http.StatusOK, []byte(info.MockConfig))
+			}
+
 			// Store Key ID in context for UsageCallback
 			c.Set("app_key_id", info.ID)
 			return next(c)
@@ -115,30 +118,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 
 	// Admin / System Routes
 
-	// Budget Stats
-	api.GET("/stats/budget", func(c echo.Context) error {
-		bal, err := budg.GetBalance()
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
-		return c.JSON(http.StatusOK, map[string]float64{"budget": bal})
-	})
-
-	api.POST("/stats/budget", func(c echo.Context) error {
-		var req struct {
-			Amount float64 `json:"amount"`
-		}
-		if err := c.Bind(&req); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-		}
-		// In a real app we might want atomic Add, but Set is fine here as we read-modify-write in frontend or use a lock.
-		// Actually, budget manager has `Refund` (=Add) but no direct `Add` API exposed.
-		// `SetBalance` is fine for now as per previous code.
-		if err := budg.SetBalance(req.Amount); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
-		return c.JSON(http.StatusOK, "updated")
-	})
+	// Budget Stats & Config: REMOVED
 
 	// Config: API Keys (Provider)
 	api.POST("/config/key", func(c echo.Context) error {
@@ -170,9 +150,12 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 
 	api.POST("/config/app-keys", func(c echo.Context) error {
 		var req struct {
-			Name        string  `json:"name"`
-			ExpiresAt   *int64  `json:"expires_at"` // Nullable
-			BudgetLimit float64 `json:"budget_limit"`
+			Name         string  `json:"name"`
+			ExpiresAt    *int64  `json:"expires_at"` // Nullable
+			BudgetLimit  float64 `json:"budget_limit"`
+			BudgetPeriod string  `json:"budget_period"`
+			IsMock       bool    `json:"is_mock"`
+			MockConfig   string  `json:"mock_config"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -181,11 +164,35 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 			return echo.NewHTTPError(http.StatusBadRequest, "Name is required")
 		}
 
-		key, err := keyMgr.GenerateKey(req.Name, req.ExpiresAt, req.BudgetLimit)
+		key, err := keyMgr.GenerateKey(req.Name, req.ExpiresAt, req.BudgetLimit, req.BudgetPeriod, req.IsMock, req.MockConfig)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
 		return c.JSON(http.StatusOK, map[string]string{"key": key})
+	})
+
+	api.PUT("/config/app-keys/:id", func(c echo.Context) error {
+		id := 0
+		if _, err := fmt.Sscanf(c.Param("id"), "%d", &id); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid ID")
+		}
+		var req struct {
+			Name        string  `json:"name"`
+			BudgetLimit float64 `json:"budget_limit"`
+			IsMock      bool    `json:"is_mock"`
+			MockConfig  string  `json:"mock_config"`
+		}
+		if err := c.Bind(&req); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+		if req.Name == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "Name is required")
+		}
+
+		if err := keyMgr.UpdateKey(id, req.Name, req.BudgetLimit, req.IsMock, req.MockConfig); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, "updated")
 	})
 
 	api.DELETE("/config/app-keys/:id", func(c echo.Context) error {
