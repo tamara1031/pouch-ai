@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"pouch-ai/internal/domain"
+	"sync"
 	"time"
 )
 
@@ -135,16 +136,27 @@ func (s *KeyService) IncrementUsage(ctx context.Context, id domain.ID, amount fl
 }
 
 func (s *KeyService) GetProviderUsage(ctx context.Context) (map[string]float64, error) {
-	usage := make(map[string]float64)
-	for _, p := range s.registry.List() {
-		u, err := p.GetUsage(ctx)
-		if err != nil {
-			// Log error but continue with other providers
-			fmt.Printf("Error fetching usage for %s: %v\n", p.Name(), err)
-			continue
-		}
-		usage[p.Name()] = u
+	providers := s.registry.List()
+	usage := make(map[string]float64, len(providers))
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	for _, p := range providers {
+		wg.Add(1)
+		go func(p domain.Provider) {
+			defer wg.Done()
+			u, err := p.GetUsage(ctx)
+			if err != nil {
+				// Log error but continue with other providers
+				fmt.Printf("Error fetching usage for %s: %v\n", p.Name(), err)
+				return
+			}
+			mu.Lock()
+			usage[p.Name()] = u
+			mu.Unlock()
+		}(p)
 	}
+	wg.Wait()
 	return usage, nil
 }
 
