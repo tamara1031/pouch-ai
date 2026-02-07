@@ -47,6 +47,8 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	if cfg.OpenAIKey != "" {
 		openaiProv := infra.NewOpenAIProvider(cfg.OpenAIKey, cfg.TargetURL, pricing, tokenCounter)
 		registry.Register(openaiProv)
+	} else {
+		fmt.Println("WARN: OpenAI API Key not found. 'openai' provider will be unavailable.")
 	}
 
 	// Register Mock Provider

@@ -2,9 +2,12 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 )
+
+var ErrProviderNotFound = errors.New("provider not found")
 
 type Model string
 
@@ -63,7 +66,7 @@ func (r *DefaultRegistry) Register(p Provider) {
 func (r *DefaultRegistry) Get(name string) (Provider, error) {
 	p, ok := r.providers[name]
 	if !ok {
-		return nil, fmt.Errorf("provider not found: %s", name)
+		return nil, fmt.Errorf("%w: %s", ErrProviderNotFound, name)
 	}
 	return p, nil
 }
