@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"pouch-ai/internal/api"
-	"pouch-ai/internal/domain"
-	"pouch-ai/internal/service"
+	"pouch-ai/backend/api"
+	"pouch-ai/backend/domain"
+	"pouch-ai/backend/service"
 )
 
 // MockRepository implements domain.Repository for testing

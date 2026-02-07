@@ -6,7 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"pouch-ai/internal/domain"
+	"pouch-ai/backend/domain"
 	"sync"
 	"time"
 )

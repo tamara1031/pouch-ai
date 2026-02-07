@@ -3,8 +3,8 @@ package api
 import (
 	"io"
 	"net/http"
-	"pouch-ai/internal/domain"
-	"pouch-ai/internal/service"
+	"pouch-ai/backend/domain"
+	"pouch-ai/backend/service"
 
 	"github.com/labstack/echo/v4"
 )

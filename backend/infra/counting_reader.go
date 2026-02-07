@@ -3,7 +3,7 @@ package infra
 import (
 	"context"
 	"io"
-	"pouch-ai/internal/domain"
+	"pouch-ai/backend/domain"
 )
 
 type CountingReader struct {

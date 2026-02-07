@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"pouch-ai/internal/config"
+	"pouch-ai/backend/config"
 	"testing"
 	"testing/fstest"
 )

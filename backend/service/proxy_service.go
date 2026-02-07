@@ -1,7 +1,7 @@
 package service
 
 import (
-	"pouch-ai/internal/domain"
+	"pouch-ai/backend/domain"
 )
 
 type ProxyService struct {

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"pouch-ai/internal/domain"
-	"pouch-ai/internal/service"
+	"pouch-ai/backend/domain"
+	"pouch-ai/backend/service"
 	"regexp"
 	"strconv"
 

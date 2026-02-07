@@ -3,8 +3,8 @@ package service_test
 import (
 	"context"
 	"net/http"
-	"pouch-ai/internal/domain"
-	"pouch-ai/internal/service"
+	"pouch-ai/backend/domain"
+	"pouch-ai/backend/service"
 	"testing"
 	"time"
 )

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"pouch-ai/internal/domain"
+	"pouch-ai/backend/domain"
 	"strings"
 	"time"
 )

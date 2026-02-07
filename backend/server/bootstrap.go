@@ -9,13 +9,13 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	"pouch-ai/internal/api"
-	"pouch-ai/internal/config"
-	"pouch-ai/internal/database"
-	"pouch-ai/internal/domain"
-	"pouch-ai/internal/infra"
-	"pouch-ai/internal/service"
-	service_mw "pouch-ai/internal/service/middleware"
+	"pouch-ai/backend/api"
+	"pouch-ai/backend/config"
+	"pouch-ai/backend/database"
+	"pouch-ai/backend/domain"
+	"pouch-ai/backend/infra"
+	"pouch-ai/backend/service"
+	service_mw "pouch-ai/backend/service/middleware"
 )
 
 type Server struct {

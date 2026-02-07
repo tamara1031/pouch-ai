@@ -2,8 +2,8 @@ package service_test
 
 import (
 	"context"
-	"pouch-ai/internal/domain"
-	"pouch-ai/internal/service"
+	"pouch-ai/backend/domain"
+	"pouch-ai/backend/service"
 	"testing"
 )
 

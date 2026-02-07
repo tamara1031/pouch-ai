@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"pouch-ai/internal/config"
-	"pouch-ai/internal/server"
-	"pouch-ai/ui"
+	"pouch-ai/backend/config"
+	"pouch-ai/backend/server"
+	ui "pouch-ai/frontend"
 )
 
 func main() {

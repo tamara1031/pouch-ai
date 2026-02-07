@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
-	"pouch-ai/internal/api"
-	"pouch-ai/internal/domain"
-	"pouch-ai/internal/infra"
-	"pouch-ai/internal/service"
+	"pouch-ai/backend/api"
+	"pouch-ai/backend/domain"
+	"pouch-ai/backend/infra"
+	"pouch-ai/backend/service"
 )
 
 func TestProxy_LargeBody(t *testing.T) {

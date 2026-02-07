@@ -3,7 +3,7 @@ package infra
 import (
 	"context"
 	"database/sql"
-	"pouch-ai/internal/domain"
+	"pouch-ai/backend/domain"
 	"time"
 )
 

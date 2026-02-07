@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"fmt"
-	"pouch-ai/internal/domain"
+	"pouch-ai/backend/domain"
 )
 
 func NewKeyValidationMiddleware() domain.Middleware {

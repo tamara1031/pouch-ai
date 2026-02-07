@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"fmt"
-	"pouch-ai/internal/service"
-	"pouch-ai/internal/domain"
+	"pouch-ai/backend/service"
+	"pouch-ai/backend/domain"
 )
 
 func NewBudgetResetMiddleware(keyService *service.KeyService) domain.Middleware {

@@ -2,7 +2,7 @@ package api
 
 import (
 	"net/http"
-	"pouch-ai/internal/service"
+	"pouch-ai/backend/service"
 	"strings"
 
 	"github.com/labstack/echo/v4"

@@ -3,7 +3,7 @@ package infra
 import (
 	"bytes"
 	"io"
-	"pouch-ai/internal/domain"
+	"pouch-ai/backend/domain"
 	"strings"
 )
 

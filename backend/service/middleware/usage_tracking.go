@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"pouch-ai/internal/service"
-	"pouch-ai/internal/domain"
+	"pouch-ai/backend/service"
+	"pouch-ai/backend/domain"
 )
 
 func NewUsageTrackingMiddleware(keyService *service.KeyService) domain.Middleware {

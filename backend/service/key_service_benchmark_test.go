@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
-	"pouch-ai/internal/domain"
+	"pouch-ai/backend/domain"
 	"testing"
 	"time"
 )
