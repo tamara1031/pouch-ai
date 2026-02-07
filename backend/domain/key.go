@@ -14,29 +14,29 @@ const MaxKeyNameLength = 50
 type ID int64
 
 type Budget struct {
-	Limit  float64
-	Usage  float64
-	Period string // "monthly", "weekly", "none"
+	Limit  float64 `json:"limit"`
+	Usage  float64 `json:"usage"`
+	Period string  `json:"period"` // "monthly", "weekly", "none"
 }
 
 type RateLimit struct {
-	Limit  int
-	Period string // "second", "minute", "none"
+	Limit  int    `json:"limit"`
+	Period string `json:"period"` // "second", "minute", "none"
 }
 
 type Key struct {
-	ID          ID
-	Name        string
-	Provider    string // "openai", "anthropic", etc.
-	KeyHash     string
-	Prefix      string
-	ExpiresAt   *time.Time
-	Budget      Budget
-	RateLimit   RateLimit
-	IsMock      bool
-	MockConfig  string
-	LastResetAt time.Time
-	CreatedAt   time.Time
+	ID          ID         `json:"id"`
+	Name        string     `json:"name"`
+	Provider    string     `json:"provider"` // "openai", "anthropic", etc.
+	KeyHash     string     `json:"key_hash"`
+	Prefix      string     `json:"prefix"`
+	ExpiresAt   *time.Time `json:"expires_at"`
+	Budget      Budget     `json:"budget"`
+	RateLimit   RateLimit  `json:"rate_limit"`
+	IsMock      bool       `json:"is_mock"`
+	MockConfig  string     `json:"mock_config"`
+	LastResetAt time.Time  `json:"last_reset_at"`
+	CreatedAt   time.Time  `json:"created_at"`
 }
 
 func (k *Key) IsExpired() bool {

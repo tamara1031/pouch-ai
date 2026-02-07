@@ -29,7 +29,7 @@ export default function EditKeyModal({ modalRef, editKey }: Props) {
             budget_limit: parseFloat(fd.get("budget_limit") as string),
             is_mock: provider === "mock",
             mock_config: fd.get("mock_config"),
-            rate_limit: parseInt(fd.get("rate_limit") as string) || 10,
+            rate_limit: parseInt(fd.get("rate_limit") as string),
             rate_period: fd.get("rate_period") || "minute",
         };
 
@@ -106,6 +106,7 @@ export default function EditKeyModal({ modalRef, editKey }: Props) {
                         </form>
                     )}
                 </div>
+                <label class="modal-backdrop" for="edit-key-modal">Close</label>
             </div>
         </>
     );

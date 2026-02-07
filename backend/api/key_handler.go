@@ -19,12 +19,55 @@ func NewKeyHandler(s *service.KeyService) *KeyHandler {
 	return &KeyHandler{service: s}
 }
 
+type KeyResponse struct {
+	ID           int64   `json:"id"`
+	Name         string  `json:"name"`
+	Provider     string  `json:"provider"`
+	Prefix       string  `json:"prefix"`
+	ExpiresAt    *int64  `json:"expires_at"`
+	BudgetLimit  float64 `json:"budget_limit"`
+	BudgetUsage  float64 `json:"budget_usage"`
+	BudgetPeriod string  `json:"budget_period"`
+	IsMock       bool    `json:"is_mock"`
+	MockConfig   string  `json:"mock_config"`
+	RateLimit    int     `json:"rate_limit"`
+	RatePeriod   string  `json:"rate_period"`
+	CreatedAt    int64   `json:"created_at"`
+}
+
+func mapKeyToResponse(k *domain.Key) KeyResponse {
+	resp := KeyResponse{
+		ID:           int64(k.ID),
+		Name:         k.Name,
+		Provider:     k.Provider,
+		Prefix:       k.Prefix,
+		BudgetLimit:  k.Budget.Limit,
+		BudgetUsage:  k.Budget.Usage,
+		BudgetPeriod: k.Budget.Period,
+		IsMock:       k.IsMock,
+		MockConfig:   k.MockConfig,
+		RateLimit:    k.RateLimit.Limit,
+		RatePeriod:   k.RateLimit.Period,
+		CreatedAt:    k.CreatedAt.Unix(),
+	}
+	if k.ExpiresAt != nil {
+		ts := k.ExpiresAt.Unix()
+		resp.ExpiresAt = &ts
+	}
+	return resp
+}
+
 func (h *KeyHandler) ListKeys(c echo.Context) error {
 	keys, err := h.service.ListKeys(c.Request().Context())
 	if err != nil {
 		return InternalError(c, err.Error())
 	}
-	return c.JSON(http.StatusOK, keys)
+
+	resp := make([]KeyResponse, len(keys))
+	for i, k := range keys {
+		resp[i] = mapKeyToResponse(k)
+	}
+	return c.JSON(http.StatusOK, resp)
 }
 
 func (h *KeyHandler) CreateKey(c echo.Context) error {
