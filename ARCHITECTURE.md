@@ -23,20 +23,28 @@ Concrete implementations of domain interfaces and external system interactions.
 - **provider**: implementations of LLM providers (OpenAI, Mock).
 - **execution**: The final handler in the proxy chain that performs the actual HTTP requests.
 - **pricing**: Token counting and pricing logic.
+- **plugins**: Plugin manager and registry interactions.
 
 ### 2.4 API & Cross-Cutting Concerns
 - **API Handler**: Echo handlers for keys and proxying (`backend/api`).
 - **Middleware**: Authentication, routing, and plugin-based logic.
 - **Logging**: Centralized structured logging using Go's `log/slog` (`backend/util/logger`).
 
+## 3. Extensibility & Plugins
+
 ### 3.1 Generic Registry
 The system utilizes a **Generic Registry** implementation (`backend/util/registry`) to manage both providers and middlewares. This ensures consistency and reduces code duplication.
 
-- **Provider Registry**: Stores initialized `Provider` instances.
-- **Middleware Registry**: Stores **Middleware Factories** (`func(map[string]any) Middleware`), allowing middlewares to be instantiated with specific configurations for each request chain.
+- **Provider Registry**: Stores initialized `Provider` instances. currently, only **Built-in** providers are supported.
+- **Middleware Registry**: Stores **Middleware Factories** (`func(map[string]any) Middleware`).
 
 ### 3.2 Schema-Driven Plugins
-Plugins define their configuration schemas (using `PluginSchema`), which are used by the frontend to dynamically generate configuration UIs. This allows new functionality to be added without frontend changes.
+Plugins define their configuration schemas (using `PluginSchema`), which are used by the frontend to dynamically generate configuration UIs.
+
+### 3.3 Plugin Loading
+The `PluginManager` (`backend/plugins/manager.go`) handles the initialization of plugins.
+- **Built-in Plugins**: Hardcoded in `backend/plugins/middlewares` and `backend/plugins/providers`.
+- **External Plugins**: The manager scans `backend/plugins/middlewares` (or configured directory) for `.so` files and loads them as middlewares using Go's `plugin` package. *Note: External plugins currently only support the Middleware interface.*
 
 ## 4. Data Flow & Middleware Chain
 
@@ -83,21 +91,25 @@ pouch-ai/
 ├── cmd/pouch/                # Entry point (main.go)
 ├── backend/
 │   ├── api/                  # API Layer (Handlers)
+│   ├── config/               # Configuration Loader
 │   ├── database/             # DB Connection Setup
 │   ├── domain/               # Domain Layer (Interfaces, Entities, Errors)
 │   ├── infra/                # Infrastructure Layer (Impl: DB, Providers)
-│   ├── plugins/              # Plugin Manager and Registries
-│   ├── server/               # Server Bootstrap & Wiring
+│   ├── plugins/              # Plugin Manager
+│   │   ├── middlewares/      # Middleware Registry & Built-ins
+│   │   └── providers/        # Provider Registry & Builders
+│   ├── server/               # Server Bootstrap (bootstrap.go) & Wiring
 │   ├── service/              # Service Layer (Orchestration)
 │   └── util/
 │       ├── logger/           # Structured Logging System
 │       └── registry/         # Generic Registry Implementation
 ├── frontend/
 │   ├── src/api/              # Type-safe API Client
-│   ├── src/components/       # Modular UI & Feature Components
-│   │   ├── ui/               # Reusable atomic components (Badge, CopyButton)
-│   │   ├── features/         # Domain-specific components (KeyCard, Dashboard)
+│   ├── src/components/       # Modular UI Components
+│   │   ├── ui/               # Reusable atomic components
+│   │   ├── features/         # Domain-specific components (Keys)
 │   │   └── modals/           # Complex stateful modal components
+│   ├── src/features/         # (Deprecated/Legacy) - Domain Logic
 │   ├── src/hooks/            # Custom Hooks and Signal-based State
 │   └── src/types.ts/         # Shared Type Definitions
 └── data/                     # SQLite Database storage (runtime)

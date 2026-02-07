@@ -72,18 +72,45 @@ logger.L.Error("failed to process request", "error", err, "plugin", pluginID)
 
 ## Adding New Plugins
 
-Pouch AI's plugin system is decentralized, making it easy to add new LLM providers or middlewares.
+Pouch AI's plugin system is decentralized, supporting both built-in components and external plugins.
 
-### Adding a Provider
+### 1. Providers (Built-in Only)
+Currently, new LLM providers must be compiled into the binary.
+
 1. Create a new package in `backend/plugins/providers/` (e.g., `anthropic`).
 2. Implement the `domain.Provider` and `domain.ProviderBuilder` interfaces.
 3. Export your builder via the `GetBuilders()` function in `backend/plugins/providers/registry.go`.
 
-### Adding a Middleware
+### 2. Middlewares (Built-in & External)
+
+#### Option A: Built-in Middleware
 1. Create a new package in `backend/plugins/middlewares/`.
 2. Implement the `domain.Middleware` interface.
 3. Define the middleware metadata (`domain.PluginInfo`) and a factory function.
 4. Register the middleware in the `GetBuiltins()` function in `backend/plugins/middlewares/registry.go`.
+
+#### Option B: External Plugin (`.so`)
+You can load middlewares dynamically at runtime using Go plugins.
+
+1. Create a main package for your plugin.
+2. Implement the `domain.Middleware` interface.
+3. Export a function `GetPlugin() domain.MiddlewareEntry`.
+4. Build the plugin: `go build -buildmode=plugin -o myplugin.so main.go`.
+5. Place the `.so` file in the configured plugins directory (default: `backend/plugins/middlewares`).
+
+**Example External Plugin:**
+```go
+package main
+
+import "pouch-ai/backend/domain"
+
+func GetPlugin() domain.MiddlewareEntry {
+    return domain.MiddlewareEntry{
+        Info:    domain.PluginInfo{ID: "my-plugin", ...},
+        Factory: NewMyMiddleware,
+    }
+}
+```
 
 ## Testing
 
