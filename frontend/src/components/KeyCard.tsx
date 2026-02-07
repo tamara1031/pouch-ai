@@ -20,37 +20,6 @@ export default function KeyCard({ keyData, middlewareInfos, onEdit, onRevoke }: 
     const status = getKeyStatus(keyData);
     const { expiresText, usagePercent, isMock, budgetLimit } = status;
 
-    // Extract Rate Limit from any middleware with both "limit" and "period" roles
-    let rate_limit = 0;
-    let rate_period: any = "none";
-
-    for (const emw of configuration?.middlewares || []) {
-        const info = middlewareInfos.find((info) => info.id === emw.id);
-        if (!info) continue;
-
-        const limitKey = Object.keys(info.schema).find(k => info.schema[k].role === "limit");
-        const periodKey = Object.keys(info.schema).find(k => info.schema[k].role === "period");
-
-        if (limitKey && periodKey) {
-            rate_limit = parseFloat(emw.config[limitKey] || "0");
-            rate_period = emw.config[periodKey];
-            break;
-        }
-    }
-
-    // Rate Limit Text
-    let rateLimitText = "Unlimited";
-    if (rate_limit > 0) {
-        if (typeof rate_period === "number" && rate_period > 0) {
-            if (rate_period === 1) rateLimitText = `${rate_limit}/sec`;
-            else if (rate_period === 60) rateLimitText = `${rate_limit}/min`;
-            else if (rate_period === 3600) rateLimitText = `${rate_limit}/hr`;
-            else rateLimitText = `${rate_limit}/${rate_period}s`;
-        } else if (typeof rate_period === "string" && rate_period !== "none" && rate_period !== "") {
-            rateLimitText = `${rate_limit}/${rate_period === "second" ? "sec" : "min"}`;
-        }
-    }
-
     return (
         <div class="group relative overflow-hidden bg-base-200/50 border border-white/5 rounded-2xl transition-all hover:bg-base-200/80">
             <div class="p-6 relative">
@@ -69,7 +38,7 @@ export default function KeyCard({ keyData, middlewareInfos, onEdit, onRevoke }: 
                         </div>
                     </div>
 
-                    <div class="w-full lg:w-auto grid grid-cols-2 md:grid-cols-4 lg:flex lg:items-center gap-4 sm:gap-8">
+                    <div class="w-full lg:w-auto grid grid-cols-2 md:grid-cols-3 lg:flex lg:items-center gap-4 sm:gap-8">
                         <div class="space-y-1">
                             <span class="text-[9px] font-bold uppercase tracking-wider text-white/20">Usage</span>
                             <div class="flex items-baseline gap-1">
@@ -77,11 +46,6 @@ export default function KeyCard({ keyData, middlewareInfos, onEdit, onRevoke }: 
                                 <span class="text-[10px] font-medium text-white/20">/ {budgetLimit > 0 ? "$" + budgetLimit.toFixed(0) : "∞"}</span>
                             </div>
                             <UsageBar percent={usagePercent} />
-                        </div>
-
-                        <div class="space-y-1 min-w-0">
-                            <span class="text-[9px] font-bold uppercase tracking-wider text-white/20">Rate</span>
-                            <div class="text-lg font-bold text-white tracking-tight font-mono truncate">{rateLimitText}</div>
                         </div>
 
                         <div class="space-y-1 hidden md:block">

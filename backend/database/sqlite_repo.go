@@ -173,11 +173,17 @@ func (r *SQLiteKeyRepository) Update(ctx context.Context, k *domain.Key) error {
 		autoRenew = 1
 	}
 
+	var expiresAt sql.NullInt64
+	if k.ExpiresAt != nil {
+		expiresAt.Int64 = k.ExpiresAt.Unix()
+		expiresAt.Valid = true
+	}
+
 	_, err = tx.ExecContext(ctx, `
 		UPDATE app_keys 
-		SET name = ?, auto_renew = ?, provider_id = ?, provider_config = ?, budget_limit = ?, reset_period = ?
+		SET name = ?, auto_renew = ?, provider_id = ?, provider_config = ?, budget_limit = ?, reset_period = ?, expires_at = ?
 		WHERE id = ?
-	`, k.Name, autoRenew, providerID, providerConfig, budgetLimit, resetPeriod, k.ID)
+	`, k.Name, autoRenew, providerID, providerConfig, budgetLimit, resetPeriod, expiresAt, k.ID)
 	if err != nil {
 		return err
 	}

@@ -161,6 +161,7 @@ func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error 
 		ResetPeriod: input.ResetPeriod,
 	}
 
+	k.ExpiresAt = nil
 	if input.ExpiresAt != nil {
 		t := time.Unix(*input.ExpiresAt, 0)
 		k.ExpiresAt = &t
