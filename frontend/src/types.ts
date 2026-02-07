@@ -40,14 +40,20 @@ export interface CreateKeyRequest {
     name: string;
     expires_at?: number | null;
     auto_renew?: boolean;
-    configuration: KeyConfiguration;
+    provider: PluginConfig;
+    middlewares: PluginConfig[];
+    budget_limit: number;
+    reset_period: number;
 }
 
 export interface UpdateKeyRequest {
     name?: string;
     expires_at?: number | null;
     auto_renew?: boolean;
-    configuration?: KeyConfiguration;
+    provider?: PluginConfig;
+    middlewares?: PluginConfig[];
+    budget_limit?: number;
+    reset_period?: number;
 }
 
 export interface Key {

@@ -58,12 +58,10 @@ export default function CreateKeyModal({ isOpen, onClose, onSuccess, middlewareI
                 name: formData.name,
                 auto_renew: formData.autoRenew,
                 expires_at,
-                configuration: {
-                    provider: { id: formData.providerId, config: formData.providerConfig },
-                    middlewares: formData.middlewares,
-                    budget_limit: parseFloat(formData.budgetLimit) || 0,
-                    reset_period: parseInt(formData.resetPeriod) || 0,
-                }
+                provider: { id: formData.providerId, config: formData.providerConfig },
+                middlewares: formData.middlewares,
+                budget_limit: parseFloat(formData.budgetLimit) || 0,
+                reset_period: parseInt(formData.resetPeriod) || 0,
             });
 
             onSuccess(data.key);
