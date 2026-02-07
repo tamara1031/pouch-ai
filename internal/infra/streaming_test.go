@@ -10,26 +10,26 @@ import (
 	"testing"
 )
 
-// MockProvider implements domain.Provider for testing
-type MockProvider struct{}
+// TestMockProvider implements domain.Provider for testing
+type TestMockProvider struct{}
 
-func (m *MockProvider) Name() string { return "mock" }
-func (m *MockProvider) GetPricing(model domain.Model) (domain.Pricing, error) {
+func (m *TestMockProvider) Name() string { return "mock" }
+func (m *TestMockProvider) GetPricing(model domain.Model) (domain.Pricing, error) {
 	return domain.Pricing{}, nil
 }
-func (m *MockProvider) CountTokens(model domain.Model, text string) (int, error) {
+func (m *TestMockProvider) CountTokens(model domain.Model, text string) (int, error) {
 	return len(text) / 4, nil // Rough approximation
 }
-func (m *MockProvider) PrepareHTTPRequest(ctx context.Context, model domain.Model, body []byte) (*http.Request, error) {
+func (m *TestMockProvider) PrepareHTTPRequest(ctx context.Context, model domain.Model, body []byte) (*http.Request, error) {
 	return nil, nil
 }
-func (m *MockProvider) EstimateUsage(model domain.Model, body []byte) (*domain.Usage, error) {
+func (m *TestMockProvider) EstimateUsage(model domain.Model, body []byte) (*domain.Usage, error) {
 	return nil, nil
 }
-func (m *MockProvider) ParseOutputUsage(model domain.Model, responseBody []byte, isStream bool) (int, error) {
+func (m *TestMockProvider) ParseOutputUsage(model domain.Model, responseBody []byte, isStream bool) (int, error) {
 	return 0, nil
 }
-func (m *MockProvider) ProcessStreamChunk(chunk []byte) (string, error) {
+func (m *TestMockProvider) ProcessStreamChunk(chunk []byte) (string, error) {
 	// Simple mock implementation
 	s := string(chunk)
 	if strings.Contains(s, "word ") {
@@ -37,10 +37,10 @@ func (m *MockProvider) ProcessStreamChunk(chunk []byte) (string, error) {
 	}
 	return "", nil
 }
-func (m *MockProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
+func (m *TestMockProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
 	return "", false, nil
 }
-func (m *MockProvider) GetUsage(ctx context.Context) (float64, error) {
+func (m *TestMockProvider) GetUsage(ctx context.Context) (float64, error) {
 	return 0, nil
 }
 
@@ -64,7 +64,7 @@ func BenchmarkStreamingReader(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		reader := NewStreamingReader(
 			io.NopCloser(bytes.NewReader(rawData)),
-			&MockProvider{},
+			&TestMockProvider{},
 			"test-model",
 		)
 
@@ -85,7 +85,7 @@ func TestStreamingReader(t *testing.T) {
 
 	reader := NewStreamingReader(
 		io.NopCloser(strings.NewReader(stream)),
-		&MockProvider{},
+		&TestMockProvider{},
 		"test-model",
 	)
 

@@ -18,7 +18,7 @@ import (
 func TestMockMiddleware_SecurityAndValidation(t *testing.T) {
 	// Setup
 	mockMiddleware := middleware.NewMockMiddleware()
-	executionHandler := infra.NewExecutionHandler()
+	executionHandler := infra.NewExecutionHandler(nil)
 	proxyService := service.NewProxyService(executionHandler, mockMiddleware)
 
 	registry := domain.NewRegistry()
