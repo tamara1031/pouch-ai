@@ -23,7 +23,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     }
 
     if (res.status === 204) return {} as T;
-    return res.json();
+
+    const text = await res.text();
+    return text ? JSON.parse(text) : {} as T;
 }
 
 export const api = {

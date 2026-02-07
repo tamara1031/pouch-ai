@@ -13,7 +13,7 @@ export default function MiddlewareComposition({ middlewares, middlewareInfos, se
         if (!mw) return;
         setMiddlewares(prev => [...prev, {
             id: mwId,
-            config: Object.keys(mw.schema).reduce((acc, key) => {
+            config: Object.keys(mw.schema || {}).reduce((acc, key) => {
                 acc[key] = mw.schema[key].default !== undefined ? mw.schema[key].default : "";
                 return acc;
             }, {} as Record<string, any>)

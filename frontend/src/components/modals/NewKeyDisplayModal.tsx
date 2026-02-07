@@ -29,7 +29,7 @@ export default function NewKeyDisplayModal({ isOpen, onClose, newKeyRaw }: Props
 
     return (
         <div class="modal modal-open modal-bottom sm:modal-middle backdrop-blur-sm transition-all duration-300">
-            <div class="modal-box max-w-md w-11/12 p-8 bg-base-100 border border-white/5 rounded-2xl shadow-2xl text-center scale-100 opacity-100 animate-in fade-in zoom-in duration-200">
+            <div class="modal-box mx-auto max-w-md w-11/12 p-8 bg-base-100 border border-white/5 rounded-2xl shadow-2xl text-center scale-100 opacity-100 animate-in fade-in zoom-in duration-200">
                 <div class="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </div>
