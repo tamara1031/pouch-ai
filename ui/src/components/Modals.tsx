@@ -134,6 +134,7 @@ export default function Modals() {
                                 <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Provider</span></label>
                                 <select name="provider" class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl text-sm">
                                     <option value="openai" selected>OpenAI</option>
+                                    <option value="mock">Mock</option>
                                     <option value="anthropic" disabled>Anthropic (Soon)</option>
                                 </select>
                             </div>
@@ -221,6 +222,7 @@ export default function Modals() {
                                     <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Provider</span></label>
                                     <select name="provider" defaultValue={editKey.provider} class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl text-sm">
                                         <option value="openai">OpenAI</option>
+                                        <option value="mock">Mock</option>
                                         <option value="anthropic" disabled>Anthropic (Soon)</option>
                                     </select>
                                 </div>
