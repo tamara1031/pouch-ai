@@ -53,7 +53,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	// 3. Initialize Application Services
 	keyService := service.NewKeyService(keyRepo, registry)
 
-	executionHandler := infra.NewExecutionHandler()
+	executionHandler := infra.NewExecutionHandler(keyRepo)
 	proxyService := service.NewProxyService(
 		executionHandler,
 		service_mw.NewRateLimitMiddleware(),               // Shut out request if rate limit is exceeded

@@ -9,11 +9,13 @@ import (
 
 type ExecutionHandler struct {
 	client *http.Client
+	repo   domain.Repository
 }
 
-func NewExecutionHandler() *ExecutionHandler {
+func NewExecutionHandler(repo domain.Repository) *ExecutionHandler {
 	return &ExecutionHandler{
 		client: &http.Client{},
+		repo:   repo,
 	}
 }
 
@@ -67,14 +69,18 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 	}
 
 	// We wrap the body to count tokens and update usage when it's closed.
-	// For now, we'll just return the body but in a real scenario we'd use a TeeReader.
-	// Since we already have the provider's logic, we can use it.
+	var repo domain.Repository
+	var keyID domain.ID
+	if req.Key != nil {
+		repo = h.repo
+		keyID = req.Key.ID
+	}
 
 	// Create a wrapper that will update the database on Close()
 	return &domain.Response{
 		StatusCode:   resp.StatusCode,
 		Header:       resp.Header,
-		Body:         resp.Body, // TODO: Wrap in CountingReader
+		Body:         NewCountingReader(resp.Body, req.Provider, req.Model, repo, keyID, req.Context),
 		PromptTokens: inputUsage.InputTokens,
 		TotalCost:    inputCost,
 	}, nil

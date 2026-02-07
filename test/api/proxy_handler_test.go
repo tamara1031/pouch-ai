@@ -38,7 +38,7 @@ func TestProxy_PassThrough(t *testing.T) {
 	registry.Register(provider)
 
 	// Service
-	executionHandler := infra.NewExecutionHandler()
+	executionHandler := infra.NewExecutionHandler(nil)
 	proxyService := service.NewProxyService(executionHandler) // No middlewares for simplicity
 
 	// Handler
