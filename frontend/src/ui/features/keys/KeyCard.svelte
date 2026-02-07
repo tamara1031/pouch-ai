@@ -2,6 +2,8 @@
   import { createEventDispatcher } from 'svelte';
   import { Shield, Key as KeyIcon, Clock, Activity, CalendarDays, MoreHorizontal } from 'lucide-svelte';
   import type { Key } from '../../../domain/key/Key';
+  import Card from '../../components/common/Card.svelte';
+  import Badge from '../../components/common/Badge.svelte';
 
   export let keyData: Key;
 
@@ -11,31 +13,34 @@
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
+
+  function handleEdit(e: Event) {
+    e.stopPropagation();
+    dispatch('edit', keyData);
+  }
 </script>
 
-<div class="key-card">
+<Card hoverable={true} on:click={() => dispatch('edit', keyData)}>
   <div class="card-header">
     <div class="key-identity">
       <div class="provider-icon">
-        <Shield size={18} />
+        <Shield size={20} />
       </div>
-      <div>
+      <div class="title-group">
         <h3>{keyData.name}</h3>
-        <span class="provider-badge">{keyData.provider}</span>
+        <Badge variant={keyData.isMock ? 'warning' : 'default'}>{keyData.provider}</Badge>
       </div>
     </div>
-    <div class="card-actions">
-        <button class="icon-btn" on:click={() => dispatch('edit', keyData)}>
-            <MoreHorizontal size={18} />
-        </button>
-    </div>
+    <!-- 
+    <button class="icon-btn" on:click={handleEdit}>
+        <MoreHorizontal size={18} />
+    </button>
+    -->
   </div>
 
   <div class="key-value-section">
     <div class="key-box">
-      <span class="key-icon-wrapper">
-        <KeyIcon size={14} />
-      </span>
+      <KeyIcon size={14} class="key-icon" />
       <span class="prefix">{keyData.prefix}</span>
       <span class="dots">••••••••••••••••</span>
       <span class="hash">{keyData.keyHash.substring(0, 4)}</span>
@@ -90,25 +95,9 @@
   {#if keyData.isMock}
       <div class="mock-badge">MOCK</div>
   {/if}
-</div>
+</Card>
 
 <style>
-  .key-card {
-    background: #171717;
-    border: 1px solid #333;
-    border-radius: 12px;
-    padding: 1.5rem;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .key-card:hover {
-    border-color: #555;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-  }
-
   .card-header {
     display: flex;
     justify-content: space-between;
@@ -118,98 +107,102 @@
 
   .key-identity {
     display: flex;
-    gap: 0.75rem;
+    gap: 1rem;
+    width: 100%;
   }
 
   .provider-icon {
-    width: 36px;
-    height: 36px;
-    background: rgba(59, 130, 246, 0.1);
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1));
     color: var(--color-primary);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-start;
   }
 
   h3 {
     font-size: 1rem;
     font-weight: 600;
-    margin-bottom: 0.1rem;
-    color: #fff;
+    color: var(--text-main);
+    line-height: 1.2;
   }
 
-  .provider-badge {
-    font-size: 0.75rem;
-    color: #888;
-    background: #222;
-    padding: 2px 6px;
-    border-radius: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
+/*
   .icon-btn {
       background: transparent;
       border: none;
-      color: #666;
+      color: var(--text-muted);
       cursor: pointer;
       padding: 4px;
-      border-radius: 4px;
-      transition: color 0.2s;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s;
   }
   
   .icon-btn:hover {
-      color: #fff;
-      background: #2a2a2a;
+      color: var(--text-main);
+      background: var(--color-surface-hover);
   }
+*/
 
   .key-value-section {
-    margin-bottom: 1.25rem;
-    background: #0a0a0a;
-    padding: 0.75rem;
-    border-radius: 6px;
-    border: 1px solid #222;
+    margin-bottom: 1.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.03);
   }
 
   .key-box {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.875rem;
-    color: #aaa;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text-muted);
   }
   
-  .key-icon-wrapper {
-      color: #555;
-      display: flex;
-      align-items: center;
+  :global(.key-icon) {
+      color: var(--color-primary);
+      opacity: 0.7;
   }
 
   .prefix {
     color: var(--color-primary);
+    font-weight: 500;
   }
   
   .dots {
       letter-spacing: -1px;
-      color: #444;
+      color: rgba(255, 255, 255, 0.1);
   }
   
   .hash {
-      color: #fff;
+      color: var(--text-main);
   }
 
   .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    gap: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
   }
   
   .stat-item {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.4rem;
   }
   
   .stat-label {
@@ -217,32 +210,33 @@
       align-items: center;
       gap: 0.5rem;
       font-size: 0.75rem;
-      color: #666;
+      color: var(--text-muted);
       text-transform: uppercase;
       font-weight: 600;
       letter-spacing: 0.05em;
   }
   
   .stat-value {
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: #ddd;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-main);
   }
   
   .text-sm {
-      font-size: 0.8rem;
+      font-size: 0.85rem;
   }
   
   .stat-sub {
       font-size: 0.75rem;
-      color: #666;
+      color: var(--text-muted);
+      font-weight: 400;
   }
   
   .progress-bar {
       height: 4px;
-      background: #333;
+      background: rgba(255, 255, 255, 0.1);
       border-radius: 2px;
-      margin-top: 4px;
+      margin-top: 6px;
       overflow: hidden;
   }
   
@@ -250,14 +244,17 @@
       height: 100%;
       background: var(--color-primary);
       border-radius: 2px;
+      box-shadow: 0 0 10px var(--color-primary-glow);
   }
   
   .progress-fill.warning {
       background: #f59e0b;
+      box-shadow: none;
   }
   
   .progress-fill.danger {
-      background: #ef4444;
+      background: var(--color-danger);
+      box-shadow: none;
   }
   
   .mock-badge {
@@ -271,6 +268,7 @@
       padding: 2px 4px;
       border-radius: 4px;
       transform: rotate(15deg);
-      opacity: 0.5;
+      opacity: 0.6;
+      pointer-events: none;
   }
 </style>

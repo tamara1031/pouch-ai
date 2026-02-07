@@ -3,7 +3,8 @@
   import { keyStore } from '../../../application/stores/keyStore';
   import type { Key } from '../../../domain/key/Key';
   import KeyCard from './KeyCard.svelte';
-  import { Loader2 } from 'lucide-svelte';
+  import { Loader2, Key as KeyIcon } from 'lucide-svelte';
+  import Button from '../../components/common/Button.svelte';
   
   let keys: Key[] = [];
   let loading = false;
@@ -25,19 +26,23 @@
   });
 </script>
 
-<div class="container">
+<div class="key-list-container">
   {#if loading && keys.length === 0}
-    <div class="center">
+    <div class="center-state">
       <Loader2 class="spin" size={32} />
     </div>
   {:else if error}
-    <div class="error">
+    <div class="center-state error">
       <p>Error loading keys: {error}</p>
-      <button on:click={() => keyStore.loadKeys()}>Retry</button>
+      <Button variant="secondary" size="sm" on:click={() => keyStore.loadKeys()}>Retry</Button>
     </div>
   {:else if keys.length === 0}
-    <div class="empty">
-      <p>No keys found. Create one to get started.</p>
+    <div class="empty-state">
+      <div class="icon-wrapper">
+        <KeyIcon size={32} />
+      </div>
+      <h3>No API Keys Found</h3>
+      <p>Create a new key to start using AI providers.</p>
     </div>
   {:else}
     <div class="grid">
@@ -53,15 +58,22 @@
 </div>
 
 <style>
-  .container {
+  .key-list-container {
     width: 100%;
   }
 
-  .center {
+  .center-state {
     display: flex;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    padding: 4rem;
-    color: #666;
+    gap: 1rem;
+    padding: 6rem;
+    color: var(--text-muted);
+  }
+
+  .error {
+    color: var(--color-danger);
   }
   
   :global(.spin) {
@@ -73,23 +85,45 @@
     to { transform: rotate(360deg); }
   }
 
-  .error {
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6rem 2rem;
     text-align: center;
-    color: #ef4444;
-    padding: 2rem;
+    background: var(--color-surface-glass);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-lg);
   }
 
-  .empty {
-    text-align: center;
-    padding: 4rem;
-    color: #666;
-    border: 2px dashed rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+  .icon-wrapper {
+    width: 64px;
+    height: 64px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    color: var(--text-muted);
+  }
+
+  .empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-main);
+  }
+
+  .empty-state p {
+    color: var(--text-muted);
+    max-width: 400px;
   }
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 1.5rem;
   }
 </style>
