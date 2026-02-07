@@ -29,13 +29,15 @@ func (r *DefaultRegistry[T]) Register(name string, item T) {
 	r.items[name] = item
 }
 
+var ErrNotFound = fmt.Errorf("item not found in registry")
+
 func (r *DefaultRegistry[T]) Get(name string) (T, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	item, ok := r.items[name]
 	if !ok {
 		var zero T
-		return zero, fmt.Errorf("item not found in registry: %s", name)
+		return zero, fmt.Errorf("%w: %s", ErrNotFound, name)
 	}
 	return item, nil
 }

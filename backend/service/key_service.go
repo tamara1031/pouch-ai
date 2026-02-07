@@ -5,9 +5,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"pouch-ai/backend/domain"
 	"pouch-ai/backend/util/logger"
+	"pouch-ai/backend/util/registry"
 	"sync"
 	"time"
 )
@@ -47,6 +49,9 @@ type CreateKeyInput struct {
 func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (string, *domain.Key, error) {
 	if input.Provider.ID != "" {
 		if _, err := s.registry.Get(input.Provider.ID); err != nil {
+			if errors.Is(err, registry.ErrNotFound) {
+				return "", nil, domain.ErrProviderNotFound
+			}
 			return "", nil, err
 		}
 	}
@@ -149,6 +154,9 @@ func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error 
 
 	if input.Provider.ID != "" {
 		if _, err := s.registry.Get(input.Provider.ID); err != nil {
+			if errors.Is(err, registry.ErrNotFound) {
+				return domain.ErrProviderNotFound
+			}
 			return err
 		}
 	}

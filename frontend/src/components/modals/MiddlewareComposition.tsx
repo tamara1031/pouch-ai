@@ -59,7 +59,7 @@ export default function MiddlewareComposition({ middlewares, middlewareInfos, se
                     <div tabindex={0} role="button" class="btn btn-sm btn-primary rounded-lg">+ Add</div>
                     <ul tabindex={0} class="dropdown-content z-[20] menu p-2 shadow-2xl bg-base-300 border border-white/10 rounded-xl w-52 mt-2">
                         {middlewareInfos.map(mw => (
-                            <li key={mw.id}><a onClick={() => addMiddleware(mw.id)} class="text-sm text-white/60 hover:text-white capitalize">{mw.id.replace(/_/g, " ")}</a></li>
+                            <li key={mw.id}><button type="button" onClick={() => addMiddleware(mw.id)} class="text-sm text-white/60 hover:text-white capitalize text-left w-full">{mw.id.replace(/_/g, " ")}</button></li>
                         ))}
                     </ul>
                 </div>
