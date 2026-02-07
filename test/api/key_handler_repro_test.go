@@ -51,6 +51,9 @@ func (p *MockProvider) EstimateUsage(model domain.Model, requestBody []byte) (*d
 func (p *MockProvider) ParseOutputUsage(model domain.Model, responseBody []byte, isStream bool) (int, error) {
 	return 0, nil
 }
+func (p *MockProvider) ProcessStreamChunk(chunk []byte) (string, error) {
+	return "", nil
+}
 func (p *MockProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
 	return "", false, nil
 }

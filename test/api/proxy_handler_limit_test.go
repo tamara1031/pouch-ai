@@ -18,7 +18,7 @@ func TestProxy_LargeBody(t *testing.T) {
 	registry := domain.NewRegistry()
 
 	// 2. Setup Service
-	executionHandler := infra.NewExecutionHandler()
+	executionHandler := infra.NewExecutionHandler(nil)
 	proxyService := service.NewProxyService(executionHandler)
 	handler := api.NewProxyHandler(proxyService, registry)
 

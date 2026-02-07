@@ -48,6 +48,10 @@ func New(dataDir string, port int, targetURL string, assets fs.FS, allowedOrigin
 		registry.Register(openaiProv)
 	}
 
+	// Register Mock Provider
+	mockProv := infra.NewMockProvider()
+	registry.Register(mockProv)
+
 	// TODO: Add more providers (Anthropic, Gemini, etc.) here
 
 	// 3. Initialize Application Services
