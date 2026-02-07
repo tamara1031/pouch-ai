@@ -1,10 +1,11 @@
 import { useState, useEffect } from "preact/hooks";
-import type { Key } from "../types";
+import type { Key, MiddlewareInfo } from "../types";
 import KeyCard from "./KeyCard";
 
 export default function Dashboard() {
     const [keys, setKeys] = useState<Key[]>([]);
     const [providerUsage, setProviderUsage] = useState<Record<string, number>>({});
+    const [middlewareInfo, setMiddlewareInfo] = useState<MiddlewareInfo[]>([]);
     const [loading, setLoading] = useState(true);
 
     const loadKeys = async () => {
@@ -30,9 +31,20 @@ export default function Dashboard() {
         }
     };
 
+    const loadMiddlewareInfo = async () => {
+        try {
+            const res = await fetch("/v1/config/middlewares", { cache: "no-store" });
+            const data = await res.json();
+            setMiddlewareInfo(data || []);
+        } catch (err) {
+            console.error("Failed to load middleware info:", err);
+        }
+    };
+
     useEffect(() => {
         loadKeys();
         loadProviderUsage();
+        loadMiddlewareInfo();
     }, []);
 
     const handleRevoke = async (id: number) => {
@@ -50,14 +62,18 @@ export default function Dashboard() {
     };
 
     const handleEdit = (key: Key) => {
-        // We'll implement Edit Modal coordination here
-        console.log("Edit key:", key);
-        // This will trigger the Edit modal state
         const event = new CustomEvent('open-edit-modal', { detail: key });
         window.dispatchEvent(event);
     };
 
-    const totalBudget = keys.reduce((acc, k) => acc + (k.budget_limit > 0 ? k.budget_limit : 0), 0);
+    // Helper to get budget limit from a key
+    const getBudgetLimit = (k: Key) => {
+        const budgetMw = k.configuration?.middlewares.find(m => m.id === "budget");
+        if (!budgetMw) return 0;
+        return parseFloat(budgetMw.config["limit"] || "0");
+    };
+
+    const totalBudget = keys.reduce((acc, k) => acc + getBudgetLimit(k), 0);
     const totalUsage = keys.reduce((acc, k) => acc + k.budget_usage, 0);
     const activeKeys = keys.filter(k => !k.expires_at || new Date(k.expires_at * 1000) > new Date()).length;
 

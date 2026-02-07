@@ -41,12 +41,8 @@ func TestKeyService_CreateKey(t *testing.T) {
 	svc := service.NewKeyService(repo, reg, mwReg)
 
 	input := service.CreateKeyInput{
-		Name:         "test-key",
-		Provider:     "openai",
-		BudgetLimit:  10.0,
-		BudgetPeriod: "monthly",
-		RateLimit:    10,
-		RatePeriod:   "minute",
+		Name:     "test-key",
+		Provider: "openai",
 	}
 
 	raw, key, err := svc.CreateKey(context.Background(), input)

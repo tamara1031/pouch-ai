@@ -2,7 +2,7 @@ import { useState } from "preact/hooks";
 import type { Key } from "../types";
 
 export function getKeyStatus(key: Key) {
-    const { expires_at, budget_limit, budget_usage, is_mock } = key;
+    const { expires_at, budget_usage, configuration } = key;
     let isExpired = false;
     let expiresText = "Never";
 
@@ -14,10 +14,16 @@ export function getKeyStatus(key: Key) {
         }
     }
 
-    const usagePercent = budget_limit > 0 ? Math.min((budget_usage / budget_limit) * 100, 100) : 0;
-    const isDepleted = budget_limit > 0 && budget_usage >= budget_limit;
+    // Extract budget limit from budget middleware
+    const budgetMw = configuration?.middlewares.find(m => m.id === "budget");
+    const budgetLimitStr = budgetMw?.config["limit"];
+    const budgetLimit = budgetLimitStr ? parseFloat(budgetLimitStr) : 0;
 
-    return { isExpired, expiresText, usagePercent, isDepleted };
+    const isMock = configuration?.provider.id === "mock";
+    const usagePercent = budgetLimit > 0 ? Math.min((budget_usage / budgetLimit) * 100, 100) : 0;
+    const isDepleted = budgetLimit > 0 && budget_usage >= budgetLimit;
+
+    return { isExpired, expiresText, usagePercent, isDepleted, isMock, budgetLimit };
 }
 
 export function StatusBadge({ status, isMock }: { status: ReturnType<typeof getKeyStatus>, isMock: boolean }) {

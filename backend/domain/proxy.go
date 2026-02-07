@@ -34,12 +34,20 @@ const (
 	FieldTypeSelect  FieldType = "select"
 )
 
+type FieldRole string
+
+const (
+	FieldRoleLimit  FieldRole = "limit"
+	FieldRolePeriod FieldRole = "period"
+)
+
 type FieldSchema struct {
 	Type        FieldType `json:"type"`
 	DisplayName string    `json:"display_name,omitempty"`
 	Default     string    `json:"default,omitempty"`
 	Description string    `json:"description,omitempty"`
 	Options     []string  `json:"options,omitempty"`
+	Role        FieldRole `json:"role,omitempty"`
 }
 
 type MiddlewareSchema map[string]FieldSchema

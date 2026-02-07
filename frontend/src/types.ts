@@ -10,12 +10,15 @@ export interface KeyConfiguration {
 
 export type FieldType = "string" | "number" | "boolean" | "select";
 
+export type FieldRole = "limit" | "period";
+
 export interface FieldSchema {
     type: FieldType;
     displayName?: string;
     default?: string;
     description?: string;
     options?: string[];
+    role?: FieldRole;
 }
 
 export type MiddlewareSchema = Record<string, FieldSchema>;
@@ -28,16 +31,9 @@ export interface MiddlewareInfo {
 export interface Key {
     id: number;
     name: string;
-    provider: string;
     prefix: string;
     expires_at: number | null;
-    budget_limit: number;
     budget_usage: number;
-    budget_period: string;
-    is_mock: boolean;
-    mock_config: string;
-    rate_limit: number;
-    rate_period: string;
     created_at: number;
-    configuration?: KeyConfiguration;
+    configuration: KeyConfiguration;
 }

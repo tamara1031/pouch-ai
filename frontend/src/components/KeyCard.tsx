@@ -11,17 +11,18 @@ export default function KeyCard({ keyData, onEdit, onRevoke }: Props) {
     const {
         id,
         name,
-        provider,
         prefix,
-        budget_limit,
         budget_usage,
-        is_mock,
-        rate_limit,
-        rate_period,
+        configuration,
     } = keyData;
 
     const status = getKeyStatus(keyData);
-    const { expiresText, usagePercent } = status;
+    const { expiresText, usagePercent, isMock, budgetLimit } = status;
+
+    // Extract Rate Limit from rate_limit middleware
+    const rateMw = configuration?.middlewares.find(m => m.id === "rate_limit");
+    const rate_limit = rateMw?.config["limit"] ? parseInt(rateMw.config["limit"]) : 0;
+    const rate_period = rateMw?.config["period"] || "none";
 
     // Rate Limit Text
     const rateLimitText = (rate_period !== "none" && rate_limit > 0)
@@ -35,8 +36,8 @@ export default function KeyCard({ keyData, onEdit, onRevoke }: Props) {
                     <div class="flex-1 space-y-3">
                         <div class="flex flex-wrap items-center gap-3">
                             <h2 class="text-xl font-bold text-white tracking-tight">{name}</h2>
-                            <div class="px-2 py-0.5 rounded bg-white/5 text-[9px] font-bold uppercase text-white/40 tracking-wider border border-white/5">{provider || "openai"}</div>
-                            <StatusBadge status={status} isMock={is_mock} />
+                            <div class="px-2 py-0.5 rounded bg-white/5 text-[9px] font-bold uppercase text-white/40 tracking-wider border border-white/5">{configuration?.provider.id || "openai"}</div>
+                            <StatusBadge status={status} isMock={isMock} />
                         </div>
                         <div class="flex items-center gap-2">
                             <CopyButton text={prefix} />
@@ -48,7 +49,7 @@ export default function KeyCard({ keyData, onEdit, onRevoke }: Props) {
                             <span class="text-[9px] font-bold uppercase tracking-wider text-white/20">Usage</span>
                             <div class="flex items-baseline gap-1">
                                 <span class="text-lg font-bold text-white tracking-tight">${budget_usage.toFixed(2)}</span>
-                                <span class="text-[10px] font-medium text-white/20">/ {budget_limit > 0 ? "$" + budget_limit.toFixed(0) : "∞"}</span>
+                                <span class="text-[10px] font-medium text-white/20">/ {budgetLimit > 0 ? "$" + budgetLimit.toFixed(0) : "∞"}</span>
                             </div>
                             <UsageBar percent={usagePercent} />
                         </div>
