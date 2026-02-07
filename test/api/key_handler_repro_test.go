@@ -38,8 +38,9 @@ func (m *MockRepository) ResetUsage(ctx context.Context, id domain.ID, lastReset
 // MockProvider implements domain.Provider for testing
 type MockProvider struct{}
 
-func (p *MockProvider) Name() string { return "test-provider" }
-func (p *MockProvider) Configure(config map[string]string) (domain.Provider, error) {
+func (p *MockProvider) Name() string                { return "test-provider" }
+func (p *MockProvider) Schema() domain.PluginSchema { return nil }
+func (p *MockProvider) Configure(config map[string]any) (domain.Provider, error) {
 	return p, nil
 }
 func (p *MockProvider) GetPricing(model domain.Model) (domain.Pricing, error) {
@@ -76,7 +77,7 @@ func TestKeyHandler_CreateKey_Validation(t *testing.T) {
 
 	// Test Case 1: Very long name
 	longName := strings.Repeat("a", 10000)
-	reqBody := `{"name": "` + longName + `", "provider": "test-provider"}`
+	reqBody := `{"name": "` + longName + `", "provider": {"id": "test-provider"}}`
 	req := httptest.NewRequest(http.MethodPost, "/keys", strings.NewReader(reqBody))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
@@ -109,7 +110,7 @@ func TestKeyHandler_CreateKey_Validation(t *testing.T) {
 
 	// Test Case 2: XSS Payload / Invalid Chars
 	xssName := `<script>alert(1)</script>`
-	reqBody = `{"name": "` + xssName + `", "provider": "test-provider"}`
+	reqBody = `{"name": "` + xssName + `", "provider": {"id": "test-provider"}}`
 	req = httptest.NewRequest(http.MethodPost, "/keys", strings.NewReader(reqBody))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec = httptest.NewRecorder()
@@ -127,7 +128,7 @@ func TestKeyHandler_CreateKey_Validation(t *testing.T) {
 
 	// Test Case 3: Valid Name
 	validName := "valid-key-name"
-	reqBody = `{"name": "` + validName + `", "provider": "test-provider"}`
+	reqBody = `{"name": "` + validName + `", "provider": {"id": "test-provider"}}`
 	req = httptest.NewRequest(http.MethodPost, "/keys", strings.NewReader(reqBody))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec = httptest.NewRecorder()

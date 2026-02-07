@@ -27,12 +27,12 @@ type FieldSchema struct {
 	Role        FieldRole `json:"role,omitempty"`
 }
 
-type MiddlewareSchema map[string]FieldSchema
+type PluginSchema map[string]FieldSchema
 
 type MiddlewareInfo struct {
-	ID        string           `json:"id"`
-	Schema    MiddlewareSchema `json:"schema"`
-	IsDefault bool             `json:"is_default,omitempty"`
+	ID        string       `json:"id"`
+	Schema    PluginSchema `json:"schema"`
+	IsDefault bool         `json:"is_default,omitempty"`
 }
 
 type Middleware interface {
@@ -57,7 +57,7 @@ type DefaultMiddlewareRegistry struct {
 
 type regEntry struct {
 	factory func(config map[string]any) Middleware
-	schema  MiddlewareSchema
+	schema  PluginSchema
 }
 
 func NewMiddlewareRegistry() MiddlewareRegistry {

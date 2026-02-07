@@ -35,8 +35,7 @@ func NewKeyService(repo domain.Repository, registry domain.ProviderRegistry, mwR
 
 type CreateKeyInput struct {
 	Name        string
-	Provider    string
-	MockConfig  string
+	Provider    domain.PluginConfig
 	ExpiresAt   *int64
 	Middlewares []domain.PluginConfig
 	BudgetLimit float64
@@ -44,8 +43,8 @@ type CreateKeyInput struct {
 }
 
 func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (string, *domain.Key, error) {
-	if input.Provider != "" {
-		if _, err := s.registry.Get(input.Provider); err != nil {
+	if input.Provider.ID != "" {
+		if _, err := s.registry.Get(input.Provider.ID); err != nil {
 			return "", nil, err
 		}
 	}
@@ -64,10 +63,7 @@ func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (strin
 		KeyHash: hash,
 		Prefix:  prefix,
 		Configuration: &domain.KeyConfiguration{
-			Provider: domain.PluginConfig{
-				ID:     input.Provider,
-				Config: map[string]any{"mock_response": input.MockConfig},
-			},
+			Provider:    input.Provider,
 			Middlewares: input.Middlewares,
 			BudgetLimit: input.BudgetLimit,
 			ResetPeriod: input.ResetPeriod,
@@ -131,8 +127,7 @@ func (s *KeyService) ListKeys(ctx context.Context) ([]*domain.Key, error) {
 type UpdateKeyInput struct {
 	ID          int64
 	Name        string
-	Provider    string
-	MockConfig  string
+	Provider    domain.PluginConfig
 	ExpiresAt   *int64
 	Middlewares []domain.PluginConfig
 	BudgetLimit float64
@@ -148,18 +143,15 @@ func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error 
 		return fmt.Errorf("key not found")
 	}
 
-	if input.Provider != "" {
-		if _, err := s.registry.Get(input.Provider); err != nil {
+	if input.Provider.ID != "" {
+		if _, err := s.registry.Get(input.Provider.ID); err != nil {
 			return err
 		}
 	}
 
 	k.Name = input.Name
 	k.Configuration = &domain.KeyConfiguration{
-		Provider: domain.PluginConfig{
-			ID:     input.Provider,
-			Config: map[string]any{"mock_response": input.MockConfig},
-		},
+		Provider:    input.Provider,
 		Middlewares: input.Middlewares,
 		BudgetLimit: input.BudgetLimit,
 		ResetPeriod: input.ResetPeriod,
@@ -252,13 +244,8 @@ func (s *KeyService) GetProviderUsage(ctx context.Context) (map[string]float64, 
 	return usage, nil
 }
 
-func (s *KeyService) ListProviders(ctx context.Context) ([]string, error) {
-	providers := s.registry.List()
-	names := make([]string, 0, len(providers))
-	for _, p := range providers {
-		names = append(names, p.Name())
-	}
-	return names, nil
+func (s *KeyService) ListProviders(ctx context.Context) ([]domain.ProviderInfo, error) {
+	return s.registry.ListInfo(), nil
 }
 
 func (s *KeyService) ListMiddlewares(ctx context.Context) ([]domain.MiddlewareInfo, error) {
@@ -296,6 +283,8 @@ func (s *KeyService) copyKey(k *domain.Key) *domain.Key {
 				ID: k.Configuration.Provider.ID,
 			},
 			Middlewares: make([]domain.PluginConfig, len(k.Configuration.Middlewares)),
+			BudgetLimit: k.Configuration.BudgetLimit,
+			ResetPeriod: k.Configuration.ResetPeriod,
 		}
 		if k.Configuration.Provider.Config != nil {
 			cfg.Provider.Config = make(map[string]any)

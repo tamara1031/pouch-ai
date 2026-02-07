@@ -26,9 +26,15 @@ type Usage struct {
 	TotalCost    float64
 }
 
+type ProviderInfo struct {
+	ID     string       `json:"id"`
+	Schema PluginSchema `json:"schema"`
+}
+
 type Provider interface {
 	Name() string
-	Configure(config map[string]string) (Provider, error)
+	Schema() PluginSchema
+	Configure(config map[string]any) (Provider, error)
 	GetPricing(model Model) (Pricing, error)
 	CountTokens(model Model, text string) (int, error)
 	PrepareHTTPRequest(ctx context.Context, model Model, body []byte) (*http.Request, error)
@@ -50,6 +56,7 @@ type ProviderRegistry interface {
 	Register(p Provider)
 	Get(name string) (Provider, error)
 	List() []Provider
+	ListInfo() []ProviderInfo
 }
 
 type DefaultProviderRegistry struct {
@@ -78,4 +85,15 @@ func (r *DefaultProviderRegistry) List() []Provider {
 		providers = append(providers, p)
 	}
 	return providers
+}
+
+func (r *DefaultProviderRegistry) ListInfo() []ProviderInfo {
+	var infos []ProviderInfo
+	for _, p := range r.providers {
+		infos = append(infos, ProviderInfo{
+			ID:     p.Name(),
+			Schema: p.Schema(),
+		})
+	}
+	return infos
 }

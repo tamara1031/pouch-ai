@@ -37,13 +37,33 @@ func NewOpenAIProvider(apiKey string, baseURL string, pricing *OpenAIPricing, co
 	}
 }
 
-func (p *OpenAIProvider) Configure(config map[string]string) (domain.Provider, error) {
+func (p *OpenAIProvider) Schema() domain.PluginSchema {
+	return domain.PluginSchema{
+		"api_key": {
+			Type:        domain.FieldTypeString,
+			DisplayName: "API Key",
+			Description: "Your OpenAI API Key",
+		},
+		"base_url": {
+			Type:        domain.FieldTypeString,
+			DisplayName: "Base URL",
+			Default:     "https://api.openai.com/v1",
+			Description: "OpenAI API Base URL",
+		},
+	}
+}
+
+func (p *OpenAIProvider) Configure(config map[string]any) (domain.Provider, error) {
 	newP := *p
 	if val, ok := config["api_key"]; ok {
-		newP.apiKey = val
+		if s, ok := val.(string); ok {
+			newP.apiKey = s
+		}
 	}
 	if val, ok := config["base_url"]; ok {
-		newP.baseURL = strings.TrimSuffix(val, "/")
+		if s, ok := val.(string); ok {
+			newP.baseURL = strings.TrimSuffix(s, "/")
+		}
 	}
 	return &newP, nil
 }

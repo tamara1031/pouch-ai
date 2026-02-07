@@ -23,12 +23,17 @@ export interface FieldSchema {
     role?: FieldRole;
 }
 
-export type MiddlewareSchema = Record<string, FieldSchema>;
+export type PluginSchema = Record<string, FieldSchema>;
 
 export interface MiddlewareInfo {
     id: string;
-    schema: MiddlewareSchema;
+    schema: PluginSchema;
     is_default?: boolean;
+}
+
+export interface ProviderInfo {
+    id: string;
+    schema: PluginSchema;
 }
 
 export interface Key {

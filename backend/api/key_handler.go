@@ -61,9 +61,8 @@ func (h *KeyHandler) ListKeys(c echo.Context) error {
 func (h *KeyHandler) CreateKey(c echo.Context) error {
 	var req struct {
 		Name        string                `json:"name"`
-		Provider    string                `json:"provider"`
+		Provider    domain.PluginConfig   `json:"provider"`
 		ExpiresAt   *int64                `json:"expires_at"`
-		MockConfig  string                `json:"mock_config"`
 		Middlewares []domain.PluginConfig `json:"middlewares"`
 		BudgetLimit float64               `json:"budget_limit"`
 		ResetPeriod int                   `json:"reset_period"`
@@ -76,7 +75,6 @@ func (h *KeyHandler) CreateKey(c echo.Context) error {
 		Name:        req.Name,
 		Provider:    req.Provider,
 		ExpiresAt:   req.ExpiresAt,
-		MockConfig:  req.MockConfig,
 		Middlewares: req.Middlewares,
 		BudgetLimit: req.BudgetLimit,
 		ResetPeriod: req.ResetPeriod,
@@ -103,8 +101,7 @@ func (h *KeyHandler) UpdateKey(c echo.Context) error {
 
 	var req struct {
 		Name        string                `json:"name"`
-		Provider    string                `json:"provider"`
-		MockConfig  string                `json:"mock_config"`
+		Provider    domain.PluginConfig   `json:"provider"`
 		ExpiresAt   *int64                `json:"expires_at"`
 		Middlewares []domain.PluginConfig `json:"middlewares"`
 		BudgetLimit float64               `json:"budget_limit"`
@@ -118,7 +115,6 @@ func (h *KeyHandler) UpdateKey(c echo.Context) error {
 		ID:          id,
 		Name:        req.Name,
 		Provider:    req.Provider,
-		MockConfig:  req.MockConfig,
 		ExpiresAt:   req.ExpiresAt,
 		Middlewares: req.Middlewares,
 		BudgetLimit: req.BudgetLimit,

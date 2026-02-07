@@ -39,6 +39,10 @@ func (m *mockRegistry) List() []domain.Provider {
 	return nil
 }
 
+func (m *mockRegistry) ListInfo() []domain.ProviderInfo {
+	return nil
+}
+
 func (m *mockRepo) GetByID(ctx context.Context, id domain.ID) (*domain.Key, error) {
 	return m.keys[id], nil
 }
@@ -71,7 +75,7 @@ func TestKeyService_CreateKey(t *testing.T) {
 
 	input := service.CreateKeyInput{
 		Name:     "test-key",
-		Provider: "openai",
+		Provider: domain.PluginConfig{ID: "openai"},
 	}
 
 	raw, key, err := svc.CreateKey(context.Background(), input)
@@ -95,7 +99,7 @@ func TestKeyService_VerifyKey(t *testing.T) {
 
 	input := service.CreateKeyInput{
 		Name:     "test-key",
-		Provider: "openai",
+		Provider: domain.PluginConfig{ID: "openai"},
 	}
 
 	raw, _, _ := svc.CreateKey(context.Background(), input)

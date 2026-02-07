@@ -28,10 +28,26 @@ func NewMockProvider() *MockProvider {
 	return p
 }
 
-func (p *MockProvider) Configure(config map[string]string) (domain.Provider, error) {
+func (p *MockProvider) Schema() domain.PluginSchema {
+	return domain.PluginSchema{
+		"mock_response": {
+			Type:        domain.FieldTypeString,
+			DisplayName: "Mock Response",
+			Default:     "This is a mock response from the Pouch AI Mock Provider.",
+			Description: "The response message to return for all requests.",
+		},
+	}
+}
+
+func (p *MockProvider) Configure(config map[string]any) (domain.Provider, error) {
 	newP := *p
 	// Share the server and lock, but copy the config
-	newP.config = config
+	newP.config = make(map[string]string)
+	for k, v := range config {
+		if s, ok := v.(string); ok {
+			newP.config[k] = s
+		}
+	}
 	return &newP, nil
 }
 

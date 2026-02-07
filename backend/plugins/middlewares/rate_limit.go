@@ -13,7 +13,7 @@ import (
 func GetInfo() domain.MiddlewareInfo {
 	return domain.MiddlewareInfo{
 		ID: "rate_limit",
-		Schema: domain.MiddlewareSchema{
+		Schema: domain.PluginSchema{
 			"limit":  {Type: domain.FieldTypeNumber, DisplayName: "Request Limit", Default: 10, Description: "Requests per period", Role: domain.FieldRoleLimit},
 			"period": {Type: domain.FieldTypeNumber, DisplayName: "Period (seconds)", Default: 60, Description: "Time window in seconds", Role: domain.FieldRolePeriod},
 		},

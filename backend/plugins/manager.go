@@ -57,14 +57,14 @@ func (m *PluginManager) loadPlugin(path string) error {
 	}
 
 	// Optional: lookup schema
-	var schema domain.MiddlewareSchema
+	var schema domain.PluginSchema
 	schemaSymbol, err := p.Lookup("GetSchema")
 	if err == nil {
-		if getSchema, ok := schemaSymbol.(*func() domain.MiddlewareSchema); ok {
+		if getSchema, ok := schemaSymbol.(*func() domain.PluginSchema); ok {
 			schema = (*getSchema)()
 		}
 	} else {
-		schema = domain.MiddlewareSchema{}
+		schema = domain.PluginSchema{}
 	}
 
 	// The ID of the middleware is the filename without extension
