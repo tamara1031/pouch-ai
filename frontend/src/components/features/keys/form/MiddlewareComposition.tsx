@@ -1,4 +1,4 @@
-import type { MiddlewareInfo, PluginConfig } from "../../types";
+import type { MiddlewareInfo, PluginConfig } from "../../../../types";
 import SchemaField from "./SchemaField";
 
 interface Props {

@@ -2,6 +2,13 @@ import type { Key, MiddlewareInfo, ProviderInfo, CreateKeyRequest, UpdateKeyRequ
 
 const BASE_URL = "/v1";
 
+export class ApiError extends Error {
+    constructor(public status: number, message: string) {
+        super(message);
+        this.name = "ApiError";
+    }
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const res = await fetch(`${BASE_URL}${path}`, {
         ...options,
@@ -19,7 +26,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         } catch (_) {
             // Ignore parse error
         }
-        throw new Error(errorMsg);
+        throw new ApiError(res.status, errorMsg);
     }
 
     if (res.status === 204) return {} as T;
@@ -28,7 +35,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     return text ? JSON.parse(text) : {} as T;
 }
 
-export const api = {
+export const apiClient = {
     keys: {
         list: () => request<Key[]>("/config/app-keys", { cache: "no-store" }),
         create: (data: CreateKeyRequest) => request<{ key: string }>("/config/app-keys", {

@@ -1,4 +1,4 @@
-import type { ProviderInfo } from "../../types";
+import type { ProviderInfo } from "../../../../types";
 import SchemaField from "./SchemaField";
 
 interface Props {

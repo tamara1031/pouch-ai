@@ -1,7 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Dashboard from "../components/features/keys/Dashboard";
-import Modals from "../components/Modals";
+import KeyManagement from "../components/features/keys/KeyManagement";
 ---
 
 <Layout title="API Keys - Pouch AI">
@@ -46,17 +45,15 @@ import Modals from "../components/Modals";
         </div>
 
         <script>
+            import { modalStore } from "../lib/store";
             document
                 .getElementById("create-key-trigger")
                 ?.addEventListener("click", () => {
-                    window.dispatchEvent(new CustomEvent("open-create-modal"));
+                    modalStore.openCreate();
                 });
         </script>
 
-        {/* Dynamic Dashboard - Client Island */}
-        <Dashboard client:load />
+        {/* Key Management Feature - Client Island */}
+        <KeyManagement client:load />
     </div>
-
-    {/* Modals - Client Island */}
-    <Modals client:load />
 </Layout>

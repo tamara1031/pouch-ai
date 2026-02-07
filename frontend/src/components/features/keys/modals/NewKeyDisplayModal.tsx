@@ -1,13 +1,10 @@
 import { useState } from "preact/hooks";
+import { modalStore } from "../../../../lib/store";
 
-interface Props {
-    isOpen: boolean;
-    onClose: () => void;
-    newKeyRaw: string | null;
-}
-
-export default function NewKeyDisplayModal({ isOpen, onClose, newKeyRaw }: Props) {
+export default function NewKeyDisplayModal() {
     const [newKeyCopied, setNewKeyCopied] = useState(false);
+    const isOpen = modalStore.isNewKeyOpen.value;
+    const newKeyRaw = modalStore.newKeyRaw.value;
 
     if (!isOpen) return null;
 
@@ -24,8 +21,10 @@ export default function NewKeyDisplayModal({ isOpen, onClose, newKeyRaw }: Props
 
     const handleDone = () => {
         window.dispatchEvent(new CustomEvent('refresh-keys'));
-        onClose();
+        modalStore.closeNewKey();
     };
+
+    const onClose = () => modalStore.closeNewKey();
 
     return (
         <div class="modal modal-open modal-bottom sm:modal-middle backdrop-blur-sm transition-all duration-300">

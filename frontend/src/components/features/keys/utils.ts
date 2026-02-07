@@ -1,15 +1,6 @@
 import type { Key } from "../../../types";
 
-export interface KeyStatus {
-    isExpired: boolean;
-    expiresText: string;
-    usagePercent: number;
-    isDepleted: boolean;
-    isMock: boolean;
-    budgetLimit: number;
-}
-
-export function getKeyStatus(key: Key): KeyStatus {
+export function getKeyStatus(key: Key) {
     const { expires_at, budget_usage, configuration } = key;
     let isExpired = false;
     let expiresText = "Never";
@@ -22,7 +13,9 @@ export function getKeyStatus(key: Key): KeyStatus {
         }
     }
 
-    const budgetLimit = configuration?.budget_limit || 0;
+    // Use native budget limit if available
+    let budgetLimit = configuration?.budget_limit || 0;
+
     const isMock = configuration?.provider.id === "mock";
     const usagePercent = budgetLimit > 0 ? Math.min((budget_usage / budgetLimit) * 100, 100) : 0;
     const isDepleted = budgetLimit > 0 && budget_usage >= budgetLimit;

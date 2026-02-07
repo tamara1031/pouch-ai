@@ -1,14 +1,16 @@
-import type { Key, MiddlewareInfo } from "../types";
-import { getKeyStatus, StatusBadge, CopyButton, UsageBar } from "./KeyCardParts";
+import { getKeyStatus } from "./utils";
+import StatusBadge from "../../ui/StatusBadge";
+import CopyButton from "../../ui/CopyButton";
+import ProgressBar from "../../ui/ProgressBar";
+import { modalStore } from "../../../lib/store";
+import type { Key } from "../../../types";
 
 interface Props {
     keyData: Key;
-    middlewareInfos: MiddlewareInfo[];
-    onEdit: (key: Key) => void;
     onRevoke: (id: number) => void;
 }
 
-export default function KeyCard({ keyData, middlewareInfos, onEdit, onRevoke }: Props) {
+export default function KeyItem({ keyData, onRevoke }: Props) {
     const {
         id,
         name,
@@ -19,6 +21,10 @@ export default function KeyCard({ keyData, middlewareInfos, onEdit, onRevoke }: 
 
     const status = getKeyStatus(keyData);
     const { expiresText, usagePercent, isMock, budgetLimit } = status;
+
+    const handleEdit = () => {
+        modalStore.openEdit(keyData);
+    };
 
     return (
         <div class="group relative overflow-hidden bg-base-200/50 border border-white/5 rounded-2xl transition-all hover:bg-base-200/80">
@@ -31,7 +37,7 @@ export default function KeyCard({ keyData, middlewareInfos, onEdit, onRevoke }: 
                             {keyData.auto_renew && (
                                 <div class="px-2 py-0.5 rounded bg-primary/10 text-[9px] font-bold uppercase text-primary tracking-wider border border-primary/20">Auto-Renew</div>
                             )}
-                            <StatusBadge status={status} isMock={isMock} />
+                            <StatusBadge isExpired={status.isExpired} isDepleted={status.isDepleted} isMock={status.isMock} />
                         </div>
                         <div class="flex items-center gap-2">
                             <CopyButton text={prefix} />
@@ -45,7 +51,7 @@ export default function KeyCard({ keyData, middlewareInfos, onEdit, onRevoke }: 
                                 <span class="text-lg font-bold text-white tracking-tight">${budget_usage.toFixed(2)}</span>
                                 <span class="text-[10px] font-medium text-white/20">/ {budgetLimit > 0 ? "$" + budgetLimit.toFixed(0) : "∞"}</span>
                             </div>
-                            <UsageBar percent={usagePercent} />
+                            <ProgressBar percent={usagePercent} />
                         </div>
 
                         <div class="space-y-1 hidden md:block">
@@ -56,7 +62,7 @@ export default function KeyCard({ keyData, middlewareInfos, onEdit, onRevoke }: 
                         <div class="flex flex-row lg:flex-row gap-2 justify-end items-center flex-1 sm:flex-none">
                             <button
                                 class="btn btn-sm h-9 px-4 rounded-lg bg-white/5 border-none text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white hover:bg-white/10 transition-all"
-                                onClick={() => onEdit(keyData)}
+                                onClick={handleEdit}
                             >
                                 Edit
                             </button>
