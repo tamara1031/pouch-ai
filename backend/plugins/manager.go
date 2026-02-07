@@ -10,6 +10,7 @@ import (
 	"pouch-ai/backend/domain"
 	"pouch-ai/backend/plugins/middlewares"
 	"pouch-ai/backend/plugins/providers"
+	"pouch-ai/backend/util/logger"
 )
 
 type PluginManager struct {
@@ -30,24 +31,21 @@ func NewPluginManager(mwRegistry domain.MiddlewareRegistry, pRegistry domain.Pro
 
 // InitializeBuiltins registers all built-in middlewares and providers.
 func (m *PluginManager) InitializeBuiltins() error {
-	// 1. Initialise Middlewares
-	m.mwRegistry.Register(middlewares.GetInfo(), middlewares.NewRateLimitMiddleware)
-
-	// 2. Initialise Providers via Builders
-	ctx := context.Background()
-	// Built-in provider builders
-	providerBuilders := []domain.ProviderBuilder{
-		&providers.OpenAIBuilder{},
-		&providers.MockBuilder{},
+	// 1. Initialize Middlewares
+	for _, builtin := range middlewares.GetBuiltins() {
+		m.mwRegistry.Register(builtin.Info, builtin.Factory)
 	}
 
-	for _, b := range providerBuilders {
+	// 2. Initialize Providers via Builders
+	ctx := context.Background()
+	for _, b := range providers.GetBuilders() {
 		p, err := b.Build(ctx, m.cfg)
 		if err != nil {
 			return fmt.Errorf("failed to build provider: %w", err)
 		}
 		if p != nil {
 			m.pRegistry.Register(p)
+			logger.L.Info("Registered built-in provider", "name", p.Name())
 		}
 	}
 
@@ -57,7 +55,9 @@ func (m *PluginManager) InitializeBuiltins() error {
 func (m *PluginManager) LoadPlugins() error {
 	// Ensure directory exists
 	if _, err := os.Stat(m.pluginDir); os.IsNotExist(err) {
-		return os.MkdirAll(m.pluginDir, 0755)
+		if err := os.MkdirAll(m.pluginDir, 0755); err != nil {
+			return err
+		}
 	}
 
 	files, err := filepath.Glob(filepath.Join(m.pluginDir, "*.so"))

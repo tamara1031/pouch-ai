@@ -16,6 +16,7 @@ import (
 	"pouch-ai/backend/infra/engine"
 	"pouch-ai/backend/plugins"
 	"pouch-ai/backend/service"
+	"pouch-ai/backend/util/logger"
 )
 
 type Server struct {
@@ -44,7 +45,7 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 
 	// Load external plugins
 	if err := pluginManager.LoadPlugins(); err != nil {
-		fmt.Printf("WARN: Failed to load external plugins: %v\n", err)
+		logger.L.Warn("failed to load external plugins", "error", err)
 	}
 
 	keyService := service.NewKeyService(keyRepo, pRegistry, mwRegistry)
@@ -59,7 +60,20 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	e := echo.New()
 	e.HideBanner = true
 
-	e.Use(middleware.RequestLogger())
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogStatus: true,
+		LogURI:    true,
+		LogMethod: true,
+		LogError:  true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			logger.L.Info("request",
+				"status", v.Status,
+				"method", v.Method,
+				"uri", v.URI,
+			)
+			return nil
+		},
+	}))
 	e.Use(middleware.Recover())
 
 	corsConfig := middleware.DefaultCORSConfig

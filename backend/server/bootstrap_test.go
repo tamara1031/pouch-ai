@@ -59,7 +59,7 @@ func TestNew_CORS(t *testing.T) {
 			cfg := &config.Config{
 				DataDir:        testDir,
 				Port:           0,
-				TargetURL:      "http://target.com",
+				OpenAIURL:      "http://target.com",
 				AllowedOrigins: tc.allowedOrigins,
 			}
 			srv, err := New(cfg, assets)

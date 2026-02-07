@@ -2,13 +2,10 @@ package domain
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"pouch-ai/backend/config"
 )
-
-var ErrProviderNotFound = errors.New("provider not found")
 
 type Model string
 

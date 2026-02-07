@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"pouch-ai/backend/domain"
+	"pouch-ai/backend/util/logger"
 	"sync"
 	"time"
 )
@@ -109,7 +110,7 @@ func (s *KeyService) VerifyKey(ctx context.Context, rawKey string) (*domain.Key,
 		return nil, err
 	}
 	if k == nil {
-		return nil, fmt.Errorf("invalid API key")
+		return nil, domain.ErrInvalidKey
 	}
 
 	s.cacheMu.Lock()
@@ -143,7 +144,7 @@ func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error 
 		return err
 	}
 	if k == nil {
-		return fmt.Errorf("key not found")
+		return domain.ErrKeyNotFound
 	}
 
 	if input.Provider.ID != "" {
@@ -255,12 +256,12 @@ func (s *KeyService) ReserveUsage(ctx context.Context, keyID domain.ID, amount f
 		return err
 	}
 	if k == nil {
-		return fmt.Errorf("key not found")
+		return domain.ErrKeyNotFound
 	}
 
 	if k.Configuration != nil && k.Configuration.BudgetLimit > 0 {
 		if k.BudgetUsage+amount > k.Configuration.BudgetLimit {
-			return fmt.Errorf("budget limit exceeded (limit: $%.2f, current+reservation: $%.2f)", k.Configuration.BudgetLimit, k.BudgetUsage+amount)
+			return fmt.Errorf("%w (limit: $%.2f, current+reservation: $%.2f)", domain.ErrBudgetExceeded, k.Configuration.BudgetLimit, k.BudgetUsage+amount)
 		}
 	}
 
@@ -315,7 +316,7 @@ func (s *KeyService) GetProviderUsage(ctx context.Context) (map[string]float64, 
 			u, err := p.GetUsage(ctx)
 			if err != nil {
 				// Log error but continue with other providers
-				fmt.Printf("Error fetching usage for %s: %v\n", p.Name(), err)
+				logger.L.Error("failed to fetch usage", "provider", p.Name(), "error", err)
 				return
 			}
 			mu.Lock()
