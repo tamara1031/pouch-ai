@@ -1,6 +1,7 @@
 import { useState, useEffect } from "preact/hooks";
 import type { MiddlewareInfo, PluginConfig, ProviderInfo } from "../../types";
 import MiddlewareComposition from "./MiddlewareComposition";
+import ProviderConfigSection from "./ProviderConfigSection";
 
 interface Props {
     modalRef: any;
@@ -9,14 +10,30 @@ interface Props {
     providerInfos: ProviderInfo[];
 }
 
-export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos }: Props) {
+export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos, providerInfos }: Props) {
     const [name, setName] = useState("");
     const [providerId, setProviderId] = useState("openai");
+    const [providerConfig, setProviderConfig] = useState<Record<string, any>>({});
     const [middlewares, setMiddlewares] = useState<PluginConfig[]>([]);
     const [expiresAtDays, setExpiresAtDays] = useState("0");
     const [budgetLimit, setBudgetLimit] = useState("5.00");
     const [resetPeriod, setResetPeriod] = useState("2592000"); // 30 days default
     const [loading, setLoading] = useState(false);
+
+    // Initialize provider config when provider changes
+    const handleProviderChange = (newProviderId: string) => {
+        setProviderId(newProviderId);
+        const info = providerInfos.find(p => p.id === newProviderId);
+        if (info?.schema) {
+            const defaults = Object.keys(info.schema).reduce((acc, key) => {
+                acc[key] = info.schema[key].default ?? "";
+                return acc;
+            }, {} as Record<string, any>);
+            setProviderConfig(defaults);
+        } else {
+            setProviderConfig({});
+        }
+    };
 
     // Default middlewares based on is_default flag in infos
     useEffect(() => {
@@ -50,7 +67,7 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos }:
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name,
-                    provider: { id: providerId, config: {} },
+                    provider: { id: providerId, config: providerConfig },
                     middlewares: middlewares,
                     budget_limit: parseFloat(budgetLimit) || 0,
                     reset_period: parseInt(resetPeriod) || 0,
@@ -63,6 +80,7 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos }:
                 onSuccess(data.key);
                 setName("");
                 setExpiresAtDays("0");
+                setProviderConfig({});
                 // Reset middlewares to defaults
                 setMiddlewares(middlewareInfos
                     .filter(mw => mw.is_default)
@@ -104,9 +122,10 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos }:
                             </div>
                             <div class="form-control">
                                 <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Provider</span></label>
-                                <select value={providerId} onChange={(e) => setProviderId(e.currentTarget.value)} class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl text-sm">
-                                    <option value="openai">OpenAI</option>
-                                    <option value="mock">Mock</option>
+                                <select value={providerId} onChange={(e) => handleProviderChange(e.currentTarget.value)} class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl text-sm">
+                                    {providerInfos.map(p => (
+                                        <option key={p.id} value={p.id}>{p.id.charAt(0).toUpperCase() + p.id.slice(1)}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div class="form-control">
@@ -127,6 +146,13 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos }:
                                 <input type="number" value={resetPeriod} onInput={(e) => setResetPeriod(e.currentTarget.value)} class="input input-bordered w-full bg-white/5 border-white/5 rounded-xl font-bold" />
                             </div>
                         </div>
+
+                        <ProviderConfigSection
+                            providerId={providerId}
+                            providerInfos={providerInfos}
+                            config={providerConfig}
+                            onConfigUpdate={(key, val) => setProviderConfig(prev => ({ ...prev, [key]: val }))}
+                        />
 
                         <MiddlewareComposition
                             middlewares={middlewares}
