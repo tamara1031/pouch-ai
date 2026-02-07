@@ -182,7 +182,7 @@ func (p *OpenAIProvider) GetUsage(ctx context.Context) (float64, error) {
 	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02")
 	end := now.Format("2006-01-02")
 
-	url := fmt.Sprintf("https://api.openai.com/v1/dashboard/billing/usage?start_date=%s&end_date=%s", start, end)
+	url := fmt.Sprintf("%s/dashboard/billing/usage?start_date=%s&end_date=%s", p.baseURL, start, end)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return 0, err
