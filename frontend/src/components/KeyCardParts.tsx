@@ -64,8 +64,8 @@ export function StatusBadge({ status, isMock }: { status: ReturnType<typeof getK
     );
 }
 
-export function ModeBadge({ period }: { period?: string }) {
-    const isRecurrent = period && period !== "none";
+export function ModeBadge({ period }: { period?: any }) {
+    const isRecurrent = (typeof period === "number" && period > 0) || (typeof period === "string" && period !== "none" && period !== "");
     const label = isRecurrent ? "Recurrent" : "Disposable";
 
     return (

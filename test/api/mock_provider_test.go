@@ -7,11 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labstack/echo/v4"
 	"pouch-ai/backend/api"
 	"pouch-ai/backend/domain"
 	"pouch-ai/backend/infra"
 	"pouch-ai/backend/service"
+	"pouch-ai/plugins/providers"
+
+	"github.com/labstack/echo/v4"
 )
 
 func TestMockProvider_Integration(t *testing.T) {
@@ -19,7 +21,7 @@ func TestMockProvider_Integration(t *testing.T) {
 	registry := domain.NewRegistry()
 
 	// Register Mock Provider
-	mockProv := infra.NewMockProvider()
+	mockProv := providers.NewMockProvider()
 	registry.Register(mockProv)
 
 	// Service
@@ -27,7 +29,7 @@ func TestMockProvider_Integration(t *testing.T) {
 
 	proxyService := service.NewProxyService(
 		executionHandler,
-		// No middlewares for simplicity
+		domain.NewMiddlewareRegistry(),
 	)
 
 	// Handler
@@ -43,8 +45,10 @@ func TestMockProvider_Integration(t *testing.T) {
 
 	// Inject Mock App Key
 	appKey := &domain.Key{
-		Provider: "mock",
-		ID:       1, // Dummy ID
+		ID: 1, // Dummy ID
+		Configuration: &domain.KeyConfiguration{
+			Provider: domain.PluginConfig{ID: "mock"},
+		},
 	}
 	c.Set("app_key", appKey)
 
@@ -86,11 +90,11 @@ func TestMockProvider_Integration(t *testing.T) {
 func TestMockProvider_Streaming_Integration(t *testing.T) {
 	// 1. Setup Dependencies
 	registry := domain.NewRegistry()
-	mockProv := infra.NewMockProvider()
+	mockProv := providers.NewMockProvider()
 	registry.Register(mockProv)
 
 	executionHandler := infra.NewExecutionHandler(nil)
-	proxyService := service.NewProxyService(executionHandler)
+	proxyService := service.NewProxyService(executionHandler, domain.NewMiddlewareRegistry())
 	handler := api.NewProxyHandler(proxyService, registry)
 
 	// 2. Setup Echo
@@ -101,7 +105,12 @@ func TestMockProvider_Streaming_Integration(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	appKey := &domain.Key{Provider: "mock", ID: 1}
+	appKey := &domain.Key{
+		ID: 1,
+		Configuration: &domain.KeyConfiguration{
+			Provider: domain.PluginConfig{ID: "mock"},
+		},
+	}
 	c.Set("app_key", appKey)
 
 	// 3. Execute

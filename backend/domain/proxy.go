@@ -44,7 +44,7 @@ const (
 type FieldSchema struct {
 	Type        FieldType `json:"type"`
 	DisplayName string    `json:"display_name,omitempty"`
-	Default     string    `json:"default,omitempty"`
+	Default     any       `json:"default,omitempty"`
 	Description string    `json:"description,omitempty"`
 	Options     []string  `json:"options,omitempty"`
 	Role        FieldRole `json:"role,omitempty"`
@@ -103,8 +103,8 @@ func (f HandlerFunc) Handle(req *Request) (*Response, error) {
 }
 
 type MiddlewareRegistry interface {
-	Register(id string, factory func(config map[string]string) Middleware, schema MiddlewareSchema)
-	Get(id string, config map[string]string) (Middleware, error)
+	Register(info MiddlewareInfo, factory func(config map[string]any) Middleware)
+	Get(id string, config map[string]any) (Middleware, error)
 	List() []MiddlewareInfo
 }
 
@@ -113,7 +113,7 @@ type DefaultMiddlewareRegistry struct {
 }
 
 type regEntry struct {
-	factory func(config map[string]string) Middleware
+	factory func(config map[string]any) Middleware
 	schema  MiddlewareSchema
 }
 
@@ -121,11 +121,11 @@ func NewMiddlewareRegistry() MiddlewareRegistry {
 	return &DefaultMiddlewareRegistry{plugins: make(map[string]regEntry)}
 }
 
-func (r *DefaultMiddlewareRegistry) Register(id string, factory func(config map[string]string) Middleware, schema MiddlewareSchema) {
-	r.plugins[id] = regEntry{factory: factory, schema: schema}
+func (r *DefaultMiddlewareRegistry) Register(info MiddlewareInfo, factory func(config map[string]any) Middleware) {
+	r.plugins[info.ID] = regEntry{factory: factory, schema: info.Schema}
 }
 
-func (r *DefaultMiddlewareRegistry) Get(id string, config map[string]string) (Middleware, error) {
+func (r *DefaultMiddlewareRegistry) Get(id string, config map[string]any) (Middleware, error) {
 	entry, ok := r.plugins[id]
 	if !ok {
 		return nil, fmt.Errorf("middleware not found: %s", id)

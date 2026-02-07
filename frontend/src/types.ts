@@ -1,6 +1,6 @@
 export interface PluginConfig {
     id: string;
-    config: Record<string, string>;
+    config: Record<string, any>;
 }
 
 export interface KeyConfiguration {
@@ -15,7 +15,7 @@ export type FieldRole = "limit" | "period";
 export interface FieldSchema {
     type: FieldType;
     displayName?: string;
-    default?: string;
+    default?: any;
     description?: string;
     options?: string[];
     role?: FieldRole;

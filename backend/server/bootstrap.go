@@ -15,7 +15,8 @@ import (
 	"pouch-ai/backend/domain"
 	"pouch-ai/backend/infra"
 	"pouch-ai/backend/service"
-	service_mw "pouch-ai/backend/service/middleware"
+	"pouch-ai/plugins/middlewares"
+	"pouch-ai/plugins/providers"
 )
 
 type Server struct {
@@ -32,12 +33,12 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	// 2. Initialize Repositories and Infrastructure
 	keyRepo := infra.NewSQLiteKeyRepository(database.DB)
 
-	pricing, err := infra.NewOpenAIPricing()
+	pricing, err := providers.NewOpenAIPricing()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load pricing: %w", err)
 	}
 
-	tokenCounter := infra.NewTiktokenCounter()
+	tokenCounter := providers.NewTiktokenCounter()
 
 	registry := domain.NewRegistry()
 
@@ -45,14 +46,14 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	// Use config for OpenAI Key if available, or fallback to Env (though config loader handles env)
 	// Actually config loader handles env, so we should use cfg.OpenAIKey
 	if cfg.OpenAIKey != "" {
-		openaiProv := infra.NewOpenAIProvider(cfg.OpenAIKey, cfg.TargetURL, pricing, tokenCounter)
+		openaiProv := providers.NewOpenAIProvider(cfg.OpenAIKey, cfg.TargetURL, pricing, tokenCounter)
 		registry.Register(openaiProv)
 	} else {
 		fmt.Println("WARN: OpenAI API Key not found. 'openai' provider will be unavailable.")
 	}
 
 	// Register Mock Provider
-	mockProv := infra.NewMockProvider()
+	mockProv := providers.NewMockProvider()
 	registry.Register(mockProv)
 
 	// TODO: Add more providers (Anthropic, Gemini, etc.) here
@@ -62,18 +63,11 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	keyService := service.NewKeyService(keyRepo, registry, mwRegistry)
 
 	executionHandler := infra.NewExecutionHandler(keyRepo)
-	mwRegistry.Register("key_validation", service_mw.NewKeyValidationMiddleware, domain.MiddlewareSchema{})
-	mwRegistry.Register("usage_tracking", service_mw.NewUsageTrackingMiddleware(keyService), domain.MiddlewareSchema{})
-	mwRegistry.Register("rate_limit", service_mw.NewRateLimitMiddleware, domain.MiddlewareSchema{
-		"limit":  {Type: domain.FieldTypeNumber, DisplayName: "Request Limit", Default: "10", Description: "Requests per period", Role: domain.FieldRoleLimit},
-		"period": {Type: domain.FieldTypeSelect, DisplayName: "Period", Options: []string{"minute", "second"}, Default: "minute", Role: domain.FieldRolePeriod},
-	})
-	mwRegistry.Register("budget", service_mw.NewBudgetEnforcementMiddleware, domain.MiddlewareSchema{
-		"limit": {Type: domain.FieldTypeNumber, DisplayName: "Budget Limit", Default: "5.00", Description: "Budget limit in USD", Role: domain.FieldRoleLimit},
-	})
-	mwRegistry.Register("budget_reset", service_mw.NewBudgetResetMiddleware(keyService), domain.MiddlewareSchema{
-		"period": {Type: domain.FieldTypeSelect, DisplayName: "Reset Period", Options: []string{"monthly", "weekly", "daily", "none"}, Default: "monthly", Role: domain.FieldRolePeriod},
-	})
+	mwRegistry.Register(middlewares.GetKeyValidationInfo(), middlewares.NewKeyValidationMiddleware)
+	mwRegistry.Register(middlewares.GetUsageTrackingInfo(keyService), middlewares.NewUsageTrackingMiddleware(keyService))
+	mwRegistry.Register(middlewares.GetInfo(), middlewares.NewRateLimitMiddleware)
+	mwRegistry.Register(middlewares.GetBudgetEnforcementInfo(), middlewares.NewBudgetEnforcementMiddleware)
+	mwRegistry.Register(middlewares.GetBudgetResetInfo(keyService), middlewares.NewBudgetResetMiddleware(keyService))
 
 	// Load external plugins
 	pluginManager := infra.NewPluginManager(mwRegistry, "./plugins/middlewares")

@@ -7,11 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labstack/echo/v4"
 	"pouch-ai/backend/api"
 	"pouch-ai/backend/domain"
 	"pouch-ai/backend/infra"
 	"pouch-ai/backend/service"
+	"pouch-ai/plugins/providers"
+
+	"github.com/labstack/echo/v4"
 )
 
 func TestProxy_PassThrough(t *testing.T) {
@@ -26,20 +28,20 @@ func TestProxy_PassThrough(t *testing.T) {
 
 	// 2. Setup Dependencies
 	// Pricing & TokenCounter (Mock or Real)
-	pricing, err := infra.NewOpenAIPricing() // Using real implementation with embedded json
+	pricing, err := providers.NewOpenAIPricing() // Using real implementation with embedded json
 	if err != nil {
 		t.Fatalf("Failed to create pricing: %v", err)
 	}
-	tokenCounter := infra.NewTiktokenCounter()
+	tokenCounter := providers.NewTiktokenCounter()
 
 	// Registry
 	registry := domain.NewRegistry()
-	provider := infra.NewOpenAIProvider("test-key", mockUpstream.URL, pricing, tokenCounter)
+	provider := providers.NewOpenAIProvider("test-key", mockUpstream.URL, pricing, tokenCounter)
 	registry.Register(provider)
 
 	// Service
 	executionHandler := infra.NewExecutionHandler(nil)
-	proxyService := service.NewProxyService(executionHandler) // No middlewares for simplicity
+	proxyService := service.NewProxyService(executionHandler, domain.NewMiddlewareRegistry()) // No middlewares for simplicity
 
 	// Handler
 	handler := api.NewProxyHandler(proxyService, registry)
@@ -54,7 +56,9 @@ func TestProxy_PassThrough(t *testing.T) {
 
 	// Mock App Key
 	appKey := &domain.Key{
-		Provider: "openai",
+		Configuration: &domain.KeyConfiguration{
+			Provider: domain.PluginConfig{ID: "openai"},
+		},
 	}
 	c.Set("app_key", appKey)
 

@@ -11,7 +11,7 @@ export default function EditKeyModal({ editKey, middlewareInfos }: Props) {
     const [id, setId] = useState<number>(0);
     const [name, setName] = useState("");
     const [providerId, setProviderId] = useState("openai");
-    const [providerConfig, setProviderConfig] = useState<Record<string, string>>({});
+    const [providerConfig, setProviderConfig] = useState<Record<string, any>>({});
     const [middlewares, setMiddlewares] = useState<PluginConfig[]>([]);
     const [expiresAt, setExpiresAt] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
@@ -64,9 +64,9 @@ export default function EditKeyModal({ editKey, middlewareInfos }: Props) {
             return [...prev, {
                 id: mwId,
                 config: Object.keys(mw.schema).reduce((acc, key) => {
-                    acc[key] = mw.schema[key].default || "";
+                    acc[key] = mw.schema[key].default !== undefined ? mw.schema[key].default : "";
                     return acc;
-                }, {} as Record<string, string>)
+                }, {} as Record<string, any>)
             }];
         });
     };
@@ -81,10 +81,17 @@ export default function EditKeyModal({ editKey, middlewareInfos }: Props) {
         });
     };
 
-    const updateMiddlewareConfig = (mwId: string, key: string, value: string) => {
-        setMiddlewares(prev => prev.map(m =>
-            m.id === mwId ? { ...m, config: { ...m.config, [key]: value } } : m
-        ));
+    const updateMiddlewareConfig = (mwId: string, key: string, value: string, type: string) => {
+        setMiddlewares(prev => prev.map(m => {
+            if (m.id !== mwId) return m;
+            let val: any = value;
+            if (type === "number") {
+                val = value === "" ? 0 : parseFloat(value);
+            } else if (type === "boolean") {
+                val = value === "true";
+            }
+            return { ...m, config: { ...m.config, [key]: val } };
+        }));
     };
 
     const formatDateForInput = (timestamp: number | null) => {
@@ -176,7 +183,7 @@ export default function EditKeyModal({ editKey, middlewareInfos }: Props) {
                                                                     <select
                                                                         class="select select-bordered select-xs bg-white/5 border-white/5 rounded-lg text-[10px]"
                                                                         value={emw.config[key]}
-                                                                        onChange={(e) => updateMiddlewareConfig(emw.id, key, e.currentTarget.value)}
+                                                                        onChange={(e) => updateMiddlewareConfig(emw.id, key, e.currentTarget.value, schema.type)}
                                                                     >
                                                                         {schema.options?.map(opt => <option value={opt} key={opt}>{opt}</option>)}
                                                                     </select>
@@ -185,7 +192,7 @@ export default function EditKeyModal({ editKey, middlewareInfos }: Props) {
                                                                         type={schema.type === "number" ? "number" : "text"}
                                                                         placeholder={schema.description}
                                                                         value={emw.config[key]}
-                                                                        onInput={(e) => updateMiddlewareConfig(emw.id, key, e.currentTarget.value)}
+                                                                        onInput={(e) => updateMiddlewareConfig(emw.id, key, e.currentTarget.value, schema.type)}
                                                                         class="input input-bordered input-xs bg-white/5 border-white/5 rounded-lg font-mono text-[10px]"
                                                                     />
                                                                 )}

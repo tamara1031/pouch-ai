@@ -25,9 +25,17 @@ export default function KeyCard({ keyData, onEdit, onRevoke }: Props) {
     const rate_period = rateMw?.config["period"] || "none";
 
     // Rate Limit Text
-    const rateLimitText = (rate_period !== "none" && rate_limit > 0)
-        ? `${rate_limit}/${rate_period === "second" ? "sec" : "min"}`
-        : "Unlimited";
+    let rateLimitText = "Unlimited";
+    if (rate_limit > 0) {
+        if (typeof rate_period === "number" && rate_period > 0) {
+            if (rate_period === 1) rateLimitText = `${rate_limit}/sec`;
+            else if (rate_period === 60) rateLimitText = `${rate_limit}/min`;
+            else if (rate_period === 3600) rateLimitText = `${rate_limit}/hr`;
+            else rateLimitText = `${rate_limit}/${rate_period}s`;
+        } else if (typeof rate_period === "string" && rate_period !== "none" && rate_period !== "") {
+            rateLimitText = `${rate_limit}/${rate_period === "second" ? "sec" : "min"}`;
+        }
+    }
 
     return (
         <div class="group relative overflow-hidden bg-base-200/50 border border-white/5 rounded-2xl transition-all hover:bg-base-200/80">

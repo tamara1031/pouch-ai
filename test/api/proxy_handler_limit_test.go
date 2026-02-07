@@ -6,11 +6,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/labstack/echo/v4"
 	"pouch-ai/backend/api"
 	"pouch-ai/backend/domain"
 	"pouch-ai/backend/infra"
 	"pouch-ai/backend/service"
+
+	"github.com/labstack/echo/v4"
 )
 
 func TestProxy_LargeBody(t *testing.T) {
@@ -19,7 +20,7 @@ func TestProxy_LargeBody(t *testing.T) {
 
 	// 2. Setup Service
 	executionHandler := infra.NewExecutionHandler(nil)
-	proxyService := service.NewProxyService(executionHandler)
+	proxyService := service.NewProxyService(executionHandler, domain.NewMiddlewareRegistry())
 	handler := api.NewProxyHandler(proxyService, registry)
 
 	// 3. Setup Echo

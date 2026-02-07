@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"pouch-ai/backend/domain"
 	"pouch-ai/backend/service"
@@ -81,8 +80,8 @@ func (h *KeyHandler) CreateKey(c echo.Context) error {
 
 	raw, _, err := h.service.CreateKey(c.Request().Context(), input)
 	if err != nil {
-		if errors.Is(err, domain.ErrProviderNotFound) {
-			return BadRequest(c, fmt.Sprintf("Invalid provider: %v", err))
+		if errors.Is(err, domain.ErrProviderNotFound) || domain.IsValidationError(err) {
+			return BadRequest(c, err.Error())
 		}
 		return InternalError(c, err.Error())
 	}
@@ -120,8 +119,8 @@ func (h *KeyHandler) UpdateKey(c echo.Context) error {
 
 	err = h.service.UpdateKey(c.Request().Context(), input)
 	if err != nil {
-		if errors.Is(err, domain.ErrProviderNotFound) {
-			return BadRequest(c, fmt.Sprintf("Invalid provider: %v", err))
+		if errors.Is(err, domain.ErrProviderNotFound) || domain.IsValidationError(err) {
+			return BadRequest(c, err.Error())
 		}
 		return InternalError(c, err.Error())
 	}

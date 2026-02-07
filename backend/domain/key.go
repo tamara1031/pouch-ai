@@ -9,13 +9,26 @@ import (
 
 var keyNameRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-\s]+$`)
 
+type ValidationError struct {
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
+
+func IsValidationError(err error) bool {
+	_, ok := err.(*ValidationError)
+	return ok
+}
+
 const MaxKeyNameLength = 50
 
 type ID int64
 
 type PluginConfig struct {
-	ID     string            `json:"id"`
-	Config map[string]string `json:"config,omitempty"`
+	ID     string         `json:"id"`
+	Config map[string]any `json:"config,omitempty"`
 }
 
 type KeyConfiguration struct {
@@ -44,16 +57,16 @@ func (k *Key) IsExpired() bool {
 
 func (k *Key) Validate() error {
 	if k.Name == "" {
-		return fmt.Errorf("key name is required")
+		return &ValidationError{"key name is required"}
 	}
 	if len(k.Name) > MaxKeyNameLength {
-		return fmt.Errorf("key name is too long (max %d characters)", MaxKeyNameLength)
+		return &ValidationError{fmt.Sprintf("key name is too long (max %d characters)", MaxKeyNameLength)}
 	}
 	if !keyNameRegex.MatchString(k.Name) {
-		return fmt.Errorf("key name contains invalid characters")
+		return &ValidationError{"key name contains invalid characters"}
 	}
 	if k.Configuration == nil || k.Configuration.Provider.ID == "" {
-		return fmt.Errorf("provider is required")
+		return &ValidationError{"provider is required"}
 	}
 
 	return nil

@@ -51,9 +51,9 @@ func (m *PluginManager) loadPlugin(path string) error {
 		return fmt.Errorf("could not find GetFactory symbol: %w", err)
 	}
 
-	factory, ok := symbol.(*func(config map[string]string) domain.Middleware)
+	factory, ok := symbol.(*func(config map[string]any) domain.Middleware)
 	if !ok {
-		return fmt.Errorf("GetFactory symbol has wrong type: expected *func(map[string]string) domain.Middleware")
+		return fmt.Errorf("GetFactory symbol has wrong type: expected *func(map[string]any) domain.Middleware")
 	}
 
 	// Optional: lookup schema
@@ -71,7 +71,10 @@ func (m *PluginManager) loadPlugin(path string) error {
 	id := filepath.Base(path)
 	id = id[:len(id)-len(filepath.Ext(id))]
 
-	m.registry.Register(id, *factory, schema)
+	m.registry.Register(domain.MiddlewareInfo{
+		ID:     id,
+		Schema: schema,
+	}, *factory)
 	fmt.Printf("Registered plugin middleware: %s (with schema: %v)\n", id, len(schema) > 0)
 
 	return nil

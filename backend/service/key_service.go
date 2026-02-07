@@ -64,7 +64,7 @@ func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (strin
 		Configuration: &domain.KeyConfiguration{
 			Provider: domain.PluginConfig{
 				ID:     input.Provider,
-				Config: map[string]string{"mock_response": input.MockConfig},
+				Config: map[string]any{"mock_response": input.MockConfig},
 			},
 			Middlewares: input.Middlewares,
 		},
@@ -152,7 +152,7 @@ func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error 
 	k.Configuration = &domain.KeyConfiguration{
 		Provider: domain.PluginConfig{
 			ID:     input.Provider,
-			Config: map[string]string{"mock_response": input.MockConfig},
+			Config: map[string]any{"mock_response": input.MockConfig},
 		},
 		Middlewares: input.Middlewares,
 	}
@@ -283,7 +283,30 @@ func (s *KeyService) copyKey(k *domain.Key) *domain.Key {
 		copy.ExpiresAt = &t
 	}
 	if k.Configuration != nil {
-		cfg := *k.Configuration
+		cfg := domain.KeyConfiguration{
+			Provider: domain.PluginConfig{
+				ID: k.Configuration.Provider.ID,
+			},
+			Middlewares: make([]domain.PluginConfig, len(k.Configuration.Middlewares)),
+		}
+		if k.Configuration.Provider.Config != nil {
+			cfg.Provider.Config = make(map[string]any)
+			for k, v := range k.Configuration.Provider.Config {
+				cfg.Provider.Config[k] = v
+			}
+		}
+		for i, mw := range k.Configuration.Middlewares {
+			mwCopy := domain.PluginConfig{
+				ID: mw.ID,
+			}
+			if mw.Config != nil {
+				mwCopy.Config = make(map[string]any)
+				for mk, mv := range mw.Config {
+					mwCopy.Config[mk] = mv
+				}
+			}
+			cfg.Middlewares[i] = mwCopy
+		}
 		copy.Configuration = &cfg
 	}
 	return &copy
