@@ -13,10 +13,10 @@ const MaxBodySize = 10 * 1024 * 1024 // 10MB
 
 type ProxyHandler struct {
 	proxyService *service.ProxyService
-	registry     domain.Registry
+	registry     domain.ProviderRegistry
 }
 
-func NewProxyHandler(ps *service.ProxyService, r domain.Registry) *ProxyHandler {
+func NewProxyHandler(ps *service.ProxyService, r domain.ProviderRegistry) *ProxyHandler {
 	return &ProxyHandler{
 		proxyService: ps,
 		registry:     r,

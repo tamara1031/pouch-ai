@@ -13,7 +13,8 @@ import (
 	"pouch-ai/backend/config"
 	"pouch-ai/backend/database"
 	"pouch-ai/backend/domain"
-	"pouch-ai/backend/infra"
+"pouch-ai/backend/infra/engine"
+"pouch-ai/backend/plugins"
 	"pouch-ai/backend/plugins/middlewares"
 	"pouch-ai/backend/plugins/providers"
 	"pouch-ai/backend/service"
@@ -31,7 +32,7 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	}
 
 	// 2. Initialize Repositories and Infrastructure
-	keyRepo := infra.NewSQLiteKeyRepository(database.DB)
+	keyRepo := database.NewSQLiteKeyRepository(database.DB)
 
 	pricing, err := providers.NewOpenAIPricing()
 	if err != nil {
@@ -40,7 +41,7 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 
 	tokenCounter := providers.NewTiktokenCounter()
 
-	registry := domain.NewRegistry()
+	registry := domain.NewProviderRegistry()
 
 	// Register OpenAI Provider
 	// Use config for OpenAI Key if available, or fallback to Env (though config loader handles env)
@@ -62,7 +63,7 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	mwRegistry := domain.NewMiddlewareRegistry()
 	keyService := service.NewKeyService(keyRepo, registry, mwRegistry)
 
-	executionHandler := infra.NewExecutionHandler(keyRepo)
+	executionHandler := engine.NewExecutionHandler(keyRepo)
 	mwRegistry.Register(middlewares.GetKeyValidationInfo(), middlewares.NewKeyValidationMiddleware)
 	mwRegistry.Register(middlewares.GetUsageTrackingInfo(keyService), middlewares.NewUsageTrackingMiddleware(keyService))
 	mwRegistry.Register(middlewares.GetInfo(), middlewares.NewRateLimitMiddleware)
@@ -70,7 +71,7 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	mwRegistry.Register(middlewares.GetBudgetResetInfo(keyService), middlewares.NewBudgetResetMiddleware(keyService))
 
 	// Load external plugins
-	pluginManager := infra.NewPluginManager(mwRegistry, "./backend/plugins/middlewares")
+	pluginManager := plugins.NewPluginManager(mwRegistry, "./backend/plugins/middlewares")
 	if err := pluginManager.LoadPlugins(); err != nil {
 		fmt.Printf("WARN: Failed to load external plugins: %v\n", err)
 	}

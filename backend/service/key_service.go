@@ -18,13 +18,13 @@ type cachedKey struct {
 
 type KeyService struct {
 	repo       domain.Repository
-	registry   domain.Registry
+	registry   domain.ProviderRegistry
 	mwRegistry domain.MiddlewareRegistry
 	cache      map[string]cachedKey
 	cacheMu    sync.RWMutex
 }
 
-func NewKeyService(repo domain.Repository, registry domain.Registry, mwRegistry domain.MiddlewareRegistry) *KeyService {
+func NewKeyService(repo domain.Repository, registry domain.ProviderRegistry, mwRegistry domain.MiddlewareRegistry) *KeyService {
 	return &KeyService{
 		repo:       repo,
 		registry:   registry,

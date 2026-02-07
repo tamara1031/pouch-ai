@@ -46,25 +46,25 @@ type Provider interface {
 	GetUsage(ctx context.Context) (float64, error)
 }
 
-type Registry interface {
+type ProviderRegistry interface {
 	Register(p Provider)
 	Get(name string) (Provider, error)
 	List() []Provider
 }
 
-type DefaultRegistry struct {
+type DefaultProviderRegistry struct {
 	providers map[string]Provider
 }
 
-func NewRegistry() Registry {
-	return &DefaultRegistry{providers: make(map[string]Provider)}
+func NewProviderRegistry() ProviderRegistry {
+	return &DefaultProviderRegistry{providers: make(map[string]Provider)}
 }
 
-func (r *DefaultRegistry) Register(p Provider) {
+func (r *DefaultProviderRegistry) Register(p Provider) {
 	r.providers[p.Name()] = p
 }
 
-func (r *DefaultRegistry) Get(name string) (Provider, error) {
+func (r *DefaultProviderRegistry) Get(name string) (Provider, error) {
 	p, ok := r.providers[name]
 	if !ok {
 		return nil, fmt.Errorf("%w: %s", ErrProviderNotFound, name)
@@ -72,7 +72,7 @@ func (r *DefaultRegistry) Get(name string) (Provider, error) {
 	return p, nil
 }
 
-func (r *DefaultRegistry) List() []Provider {
+func (r *DefaultProviderRegistry) List() []Provider {
 	var providers []Provider
 	for _, p := range r.providers {
 		providers = append(providers, p)

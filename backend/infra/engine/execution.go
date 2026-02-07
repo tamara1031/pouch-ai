@@ -1,10 +1,11 @@
-package infra
+package engine
 
 import (
 	"bytes"
 	"io"
 	"net/http"
 	"pouch-ai/backend/domain"
+	"pouch-ai/backend/util"
 )
 
 type ExecutionHandler struct {
@@ -80,7 +81,7 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 	return &domain.Response{
 		StatusCode:   resp.StatusCode,
 		Header:       resp.Header,
-		Body:         NewCountingReader(resp.Body, req.Provider, req.Model, repo, keyID, req.Context),
+		Body:         util.NewCountingReader(resp.Body, req.Provider, req.Model, repo, keyID, req.Context),
 		PromptTokens: inputUsage.InputTokens,
 		TotalCost:    inputCost,
 	}, nil
