@@ -4,7 +4,6 @@ import KeyCard from "./KeyCard";
 
 export default function Dashboard() {
     const [keys, setKeys] = useState<Key[]>([]);
-    const [providerUsage, setProviderUsage] = useState<Record<string, number>>({});
     const [middlewareInfo, setMiddlewareInfo] = useState<MiddlewareInfo[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -21,16 +20,6 @@ export default function Dashboard() {
         }
     };
 
-    const loadProviderUsage = async () => {
-        try {
-            const res = await fetch("/v1/config/providers/usage", { cache: "no-store" });
-            const data = await res.json();
-            setProviderUsage(data || {});
-        } catch (err) {
-            console.error("Failed to load provider usage:", err);
-        }
-    };
-
     const loadMiddlewareInfo = async () => {
         try {
             const res = await fetch("/v1/config/middlewares", { cache: "no-store" });
@@ -43,7 +32,6 @@ export default function Dashboard() {
 
     useEffect(() => {
         loadKeys();
-        loadProviderUsage();
         loadMiddlewareInfo();
     }, []);
 
@@ -66,11 +54,6 @@ export default function Dashboard() {
         window.dispatchEvent(event);
     };
 
-    // Helper to get budget limit from a key
-    const getBudgetLimit = (k: Key) => k.configuration?.budget_limit || 0;
-
-    const totalBudget = keys.reduce((acc, k) => acc + getBudgetLimit(k), 0);
-    const totalUsage = keys.reduce((acc, k) => acc + k.budget_usage, 0);
     const activeKeys = keys.filter(k => !k.expires_at || new Date(k.expires_at * 1000) > new Date()).length;
 
     if (loading && keys.length === 0) {
@@ -107,7 +90,7 @@ export default function Dashboard() {
     return (
         <div class="flex flex-col gap-10 animate-in fade-in slide-in-from-bottom-2 duration-700">
             {/* Stats Overview */}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-base-200/50 border border-white/5 p-6 rounded-2xl flex flex-col gap-1 transition-all hover:bg-base-200/80">
                     <span class="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">Total Keys</span>
                     <div class="flex items-baseline gap-2">
@@ -121,19 +104,6 @@ export default function Dashboard() {
                         <span class="text-3xl font-bold text-success tracking-tight">{activeKeys}</span>
                         <span class="text-[10px] font-medium text-white/20 uppercase tracking-widest">Online</span>
                     </div>
-                </div>
-                <div class="bg-base-200/50 border border-white/5 p-6 rounded-2xl flex flex-col gap-1 transition-all hover:bg-base-200/80">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">Usage Cost</span>
-                    <div class="flex items-baseline gap-2">
-                        <span class="text-3xl font-bold text-primary tracking-tight">${totalUsage.toFixed(2)}</span>
-                        <span class="text-[10px] font-medium text-white/20 font-mono">/ {totalBudget > 0 ? "$" + totalBudget.toFixed(0) : "∞"}</span>
-                    </div>
-                    {providerUsage["openai"] !== undefined && (
-                        <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between">
-                            <span class="text-[9px] font-bold uppercase tracking-wider text-white/20">OpenAI Actual</span>
-                            <span class="text-[10px] font-bold text-white/40">${providerUsage["openai"].toFixed(2)}</span>
-                        </div>
-                    )}
                 </div>
             </div>
 
