@@ -111,27 +111,11 @@ func (p *OpenAIProvider) ParseOutputUsage(model domain.Model, responseBody []byt
 		}
 	} else {
 		var fullContent strings.Builder
-		prefixData := []byte("data: ")
-		suffixDone := []byte("[DONE]")
-
 		lines := bytes.Split(responseBody, []byte("\n"))
 		for _, line := range lines {
-			line = bytes.TrimSpace(line)
-			if !bytes.HasPrefix(line, prefixData) || bytes.HasSuffix(line, suffixDone) {
-				continue
-			}
-			data := bytes.TrimPrefix(line, prefixData)
-			var chunk struct {
-				Choices []struct {
-					Delta struct {
-						Content string `json:"content"`
-					} `json:"delta"`
-				} `json:"choices"`
-			}
-			if err := json.Unmarshal(data, &chunk); err == nil {
-				if len(chunk.Choices) > 0 {
-					fullContent.WriteString(chunk.Choices[0].Delta.Content)
-				}
+			content, err := p.ProcessStreamChunk(line)
+			if err == nil {
+				fullContent.WriteString(content)
 			}
 		}
 		finalText := fullContent.String()
