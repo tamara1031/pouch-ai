@@ -4,7 +4,8 @@ import { api } from "../../api/api";
 import KeyForm from "./KeyForm";
 
 interface Props {
-    modalRef: any;
+    isOpen: boolean;
+    onClose: () => void;
     editKey: Key | null;
     middlewareInfos: MiddlewareInfo[];
     providerInfos: ProviderInfo[];
@@ -21,7 +22,7 @@ const INITIAL_FORM_DATA = {
     resetPeriod: "0",
 };
 
-export default function EditKeyModal({ modalRef, editKey, middlewareInfos, providerInfos }: Props) {
+export default function EditKeyModal({ isOpen, onClose, editKey, middlewareInfos, providerInfos }: Props) {
     const [id, setId] = useState<number>(0);
     const [formData, setFormData] = useState(INITIAL_FORM_DATA);
     const [loading, setLoading] = useState(false);
@@ -48,14 +49,17 @@ export default function EditKeyModal({ modalRef, editKey, middlewareInfos, provi
         try {
             await api.keys.update(id, {
                 name: formData.name,
-                provider: { id: formData.providerId, config: formData.providerConfig },
-                middlewares: formData.middlewares,
                 auto_renew: formData.autoRenew,
-                budget_limit: parseFloat(formData.budgetLimit) || 0,
-                reset_period: parseInt(formData.resetPeriod) || 0,
                 expires_at: formData.expiresAt,
+                configuration: {
+                    provider: { id: formData.providerId, config: formData.providerConfig },
+                    middlewares: formData.middlewares,
+                    budget_limit: parseFloat(formData.budgetLimit) || 0,
+                    reset_period: parseInt(formData.resetPeriod) || 0,
+                }
             });
-            window.location.reload();
+            window.dispatchEvent(new CustomEvent('refresh-keys'));
+            onClose();
         } catch (err: any) {
             console.error("Update error:", err);
             alert(err.message || "Failed to update key");
@@ -64,40 +68,39 @@ export default function EditKeyModal({ modalRef, editKey, middlewareInfos, provi
         }
     };
 
+    if (!isOpen) return null;
+
     return (
-        <>
-            <input type="checkbox" id="edit-key-modal" class="modal-toggle" ref={modalRef} />
-            <div class="modal modal-bottom sm:modal-middle">
-                <div class="modal-box w-full max-w-3xl bg-base-100 border border-white/10 rounded-2xl shadow-2xl p-0 max-h-[90vh] flex flex-col">
-                    <div class="p-6 border-b border-white/10 flex justify-between items-center bg-base-200/30 rounded-t-2xl shrink-0">
-                        <div>
-                            <h3 class="font-bold text-lg text-white">Edit API Key</h3>
-                            <p class="text-sm text-white/40 mt-0.5">Modify key settings and middleware configuration.</p>
-                        </div>
-                        <label for="edit-key-modal" class="btn btn-sm btn-circle btn-ghost text-white/40 hover:text-white">✕</label>
+        <div class="modal modal-open modal-bottom sm:modal-middle backdrop-blur-sm transition-all duration-300">
+            <div class="modal-box w-full max-w-3xl bg-base-100 border border-white/10 rounded-2xl shadow-2xl p-0 max-h-[90vh] flex flex-col scale-100 opacity-100 animate-in fade-in zoom-in duration-200">
+                <div class="p-6 border-b border-white/10 flex justify-between items-center bg-base-200/30 rounded-t-2xl shrink-0">
+                    <div>
+                        <h3 class="font-bold text-lg text-white">Edit API Key</h3>
+                        <p class="text-sm text-white/40 mt-0.5">Modify key settings and middleware configuration.</p>
                     </div>
-
-                    {editKey && (
-                        <form class="flex-1 overflow-y-auto p-6 space-y-6" onSubmit={handleSave}>
-                            <KeyForm
-                                formData={formData}
-                                setFormData={setFormData}
-                                middlewareInfos={middlewareInfos}
-                                providerInfos={providerInfos}
-                                showExpirationField={true}
-                            />
-
-                            <div class="flex justify-end gap-3 pt-4 border-t border-white/10">
-                                <label for="edit-key-modal" class="btn btn-ghost rounded-lg text-white/50 hover:text-white">Cancel</label>
-                                <button type="submit" class="btn btn-primary px-8 rounded-lg font-medium" disabled={loading}>
-                                    {loading ? "Saving..." : "Save Changes"}
-                                </button>
-                            </div>
-                        </form>
-                    )}
+                    <button onClick={onClose} class="btn btn-sm btn-circle btn-ghost text-white/40 hover:text-white">✕</button>
                 </div>
-                <label class="modal-backdrop" for="edit-key-modal">Close</label>
+
+                {editKey && (
+                    <form class="flex-1 overflow-y-auto p-6 space-y-6" onSubmit={handleSave}>
+                        <KeyForm
+                            formData={formData}
+                            setFormData={setFormData}
+                            middlewareInfos={middlewareInfos}
+                            providerInfos={providerInfos}
+                            showExpirationField={true}
+                        />
+
+                        <div class="flex justify-end gap-3 pt-4 border-t border-white/10">
+                            <button type="button" onClick={onClose} class="btn btn-ghost rounded-lg text-white/50 hover:text-white">Cancel</button>
+                            <button type="submit" class="btn btn-primary px-8 rounded-lg font-bold" disabled={loading}>
+                                {loading ? <span class="loading loading-spinner loading-xs"></span> : "Save Changes"}
+                            </button>
+                        </div>
+                    </form>
+                )}
             </div>
-        </>
+            <div class="modal-backdrop bg-black/40" onClick={onClose}>Close</div>
+        </div>
     );
 }

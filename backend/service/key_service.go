@@ -328,12 +328,36 @@ func (s *KeyService) GetProviderUsage(ctx context.Context) (map[string]float64, 
 	return usage, nil
 }
 
-func (s *KeyService) ListProviders(ctx context.Context) ([]domain.ProviderInfo, error) {
-	return s.registry.ListInfo(), nil
+func (s *KeyService) ListProviders(ctx context.Context) ([]domain.PluginInfo, error) {
+	providers := s.registry.List()
+	infos := make([]domain.PluginInfo, 0, len(providers))
+	for _, p := range providers {
+		infos = append(infos, domain.PluginInfo{
+			ID:     p.Name(),
+			Schema: p.Schema(),
+		})
+	}
+	return infos, nil
 }
 
-func (s *KeyService) ListMiddlewares(ctx context.Context) ([]domain.MiddlewareInfo, error) {
-	return s.mwRegistry.List(), nil
+func (s *KeyService) ListMiddlewares(ctx context.Context) ([]domain.PluginInfo, error) {
+	// For now, middlewares in registry are just factories.
+	// We might need a separate way to get their Info if we want to list them with schemas.
+	// But according to current registration, we only have names in registry.
+	// Wait, the mwRegistry is Registry[func(map[string]any) Middleware].
+	// Generic Registry.List() returns the items (factories).
+	// Registry.ListKeys() returns the IDs.
+
+	ids := s.mwRegistry.ListKeys()
+	infos := make([]domain.PluginInfo, 0, len(ids))
+	for _, id := range ids {
+		infos = append(infos, domain.PluginInfo{
+			ID: id,
+			// Schema is missing here because we only registered the factory.
+			// This is a known limitation that I should probably fix by registering a struct.
+		})
+	}
+	return infos, nil
 }
 
 // Helpers

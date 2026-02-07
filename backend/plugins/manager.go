@@ -33,7 +33,7 @@ func NewPluginManager(mwRegistry domain.MiddlewareRegistry, pRegistry domain.Pro
 func (m *PluginManager) InitializeBuiltins() error {
 	// 1. Initialize Middlewares
 	for _, builtin := range middlewares.GetBuiltins() {
-		m.mwRegistry.Register(builtin.Info, builtin.Factory)
+		m.mwRegistry.Register(builtin.Info.ID, builtin.Factory)
 	}
 
 	// 2. Initialize Providers via Builders
@@ -44,7 +44,7 @@ func (m *PluginManager) InitializeBuiltins() error {
 			return fmt.Errorf("failed to build provider: %w", err)
 		}
 		if p != nil {
-			m.pRegistry.Register(p)
+			m.pRegistry.Register(p.Name(), p)
 			logger.L.Info("Registered built-in provider", "name", p.Name())
 		}
 	}
@@ -90,26 +90,12 @@ func (m *PluginManager) loadPlugin(path string) error {
 		return fmt.Errorf("GetFactory symbol has wrong type: expected *func(map[string]any) domain.Middleware")
 	}
 
-	// Optional: lookup schema
-	var schema domain.PluginSchema
-	schemaSymbol, err := p.Lookup("GetSchema")
-	if err == nil {
-		if getSchema, ok := schemaSymbol.(*func() domain.PluginSchema); ok {
-			schema = (*getSchema)()
-		}
-	} else {
-		schema = domain.PluginSchema{}
-	}
-
 	// The ID of the middleware is the filename without extension
 	id := filepath.Base(path)
 	id = id[:len(id)-len(filepath.Ext(id))]
 
-	m.mwRegistry.Register(domain.MiddlewareInfo{
-		ID:     id,
-		Schema: schema,
-	}, *factory)
-	fmt.Printf("Registered plugin middleware: %s (with schema: %v)\n", id, len(schema) > 0)
+	m.mwRegistry.Register(id, *factory)
+	fmt.Printf("Registered plugin middleware: %s\n", id)
 
 	return nil
 }

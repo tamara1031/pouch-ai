@@ -27,11 +27,6 @@ const MaxKeyNameLength = 50
 
 type ID int64
 
-type PluginConfig struct {
-	ID     string         `json:"id"`
-	Config map[string]any `json:"config,omitempty"`
-}
-
 type KeyConfiguration struct {
 	Provider    PluginConfig   `json:"provider"`
 	Middlewares []PluginConfig `json:"middlewares"`

@@ -10,8 +10,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
-func GetInfo() domain.MiddlewareInfo {
-	return domain.MiddlewareInfo{
+func GetInfo() domain.PluginInfo {
+	return domain.PluginInfo{
 		ID: "rate_limit",
 		Schema: domain.PluginSchema{
 			"limit":  {Type: domain.FieldTypeNumber, DisplayName: "Request Limit", Default: 10, Description: "Requests per period", Role: domain.FieldRoleLimit},

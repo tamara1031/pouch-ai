@@ -1,4 +1,4 @@
-import type { Key, MiddlewareInfo, ProviderInfo, PluginConfig } from "../types";
+import type { Key, MiddlewareInfo, ProviderInfo, CreateKeyRequest, UpdateKeyRequest } from "../types";
 
 const BASE_URL = "/v1";
 
@@ -29,11 +29,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
     keys: {
         list: () => request<Key[]>("/config/app-keys", { cache: "no-store" }),
-        create: (data: any) => request<{ key: string }>("/config/app-keys", {
+        create: (data: CreateKeyRequest) => request<{ key: string }>("/config/app-keys", {
             method: "POST",
             body: JSON.stringify(data),
         }),
-        update: (id: number, data: any) => request<void>(`/config/app-keys/${id}`, {
+        update: (id: number, data: UpdateKeyRequest) => request<void>(`/config/app-keys/${id}`, {
             method: "PUT",
             body: JSON.stringify(data),
         }),

@@ -36,6 +36,20 @@ export interface ProviderInfo {
     schema: PluginSchema;
 }
 
+export interface CreateKeyRequest {
+    name: string;
+    expires_at?: number | null;
+    auto_renew?: boolean;
+    configuration: KeyConfiguration;
+}
+
+export interface UpdateKeyRequest {
+    name?: string;
+    expires_at?: number | null;
+    auto_renew?: boolean;
+    configuration?: KeyConfiguration;
+}
+
 export interface Key {
     id: number;
     name: string;

@@ -2,10 +2,13 @@ package domain
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"pouch-ai/backend/config"
 )
+
+type ProviderBuilder interface {
+	Build(ctx context.Context, cfg *config.Config) (Provider, error)
+}
 
 type Model string
 
@@ -22,11 +25,6 @@ type Usage struct {
 	InputTokens  int
 	OutputTokens int
 	TotalCost    float64
-}
-
-type ProviderInfo struct {
-	ID     string       `json:"id"`
-	Schema PluginSchema `json:"schema"`
 }
 
 type Provider interface {
@@ -48,54 +46,4 @@ type Provider interface {
 
 	// GetUsage returns the total usage cost from the provider side (e.g. billing)
 	GetUsage(ctx context.Context) (float64, error)
-}
-
-type ProviderRegistry interface {
-	Register(p Provider)
-	Get(name string) (Provider, error)
-	List() []Provider
-	ListInfo() []ProviderInfo
-}
-
-type ProviderBuilder interface {
-	Build(ctx context.Context, cfg *config.Config) (Provider, error)
-}
-
-type DefaultProviderRegistry struct {
-	providers map[string]Provider
-}
-
-func NewProviderRegistry() ProviderRegistry {
-	return &DefaultProviderRegistry{providers: make(map[string]Provider)}
-}
-
-func (r *DefaultProviderRegistry) Register(p Provider) {
-	r.providers[p.Name()] = p
-}
-
-func (r *DefaultProviderRegistry) Get(name string) (Provider, error) {
-	p, ok := r.providers[name]
-	if !ok {
-		return nil, fmt.Errorf("%w: %s", ErrProviderNotFound, name)
-	}
-	return p, nil
-}
-
-func (r *DefaultProviderRegistry) List() []Provider {
-	var providers []Provider
-	for _, p := range r.providers {
-		providers = append(providers, p)
-	}
-	return providers
-}
-
-func (r *DefaultProviderRegistry) ListInfo() []ProviderInfo {
-	var infos []ProviderInfo
-	for _, p := range r.providers {
-		infos = append(infos, ProviderInfo{
-			ID:     p.Name(),
-			Schema: p.Schema(),
-		})
-	}
-	return infos
 }

@@ -25,7 +25,7 @@ func TestMockProvider_Integration(t *testing.T) {
 
 	// Register Mock Provider
 	mockProv := providers.NewMockProvider()
-	registry.Register(mockProv)
+	registry.Register(mockProv.Name(), mockProv)
 
 	// Service
 	executionHandler := engine.NewExecutionHandler(repo)
@@ -97,7 +97,7 @@ func TestMockProvider_Streaming_Integration(t *testing.T) {
 	mwRegistry := domain.NewMiddlewareRegistry()
 	keyService := service.NewKeyService(&MockRepository{}, registry, mwRegistry)
 	mockProv := providers.NewMockProvider()
-	registry.Register(mockProv)
+	registry.Register(mockProv.Name(), mockProv)
 
 	executionHandler := engine.NewExecutionHandler(&MockRepository{})
 	proxyService := service.NewProxyService(executionHandler, mwRegistry, keyService)

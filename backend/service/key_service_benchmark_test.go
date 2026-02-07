@@ -91,10 +91,10 @@ func (m *MockRepository) ResetUsage(ctx context.Context, id domain.ID, lastReset
 // MockRegistry
 type MockRegistry struct{}
 
-func (m *MockRegistry) Register(p domain.Provider)               {}
+func (m *MockRegistry) Register(name string, p domain.Provider)  {}
 func (m *MockRegistry) Get(name string) (domain.Provider, error) { return &DummyProvider{}, nil }
 func (m *MockRegistry) List() []domain.Provider                  { return nil }
-func (m *MockRegistry) ListInfo() []domain.ProviderInfo          { return nil }
+func (m *MockRegistry) ListKeys() []string                       { return nil }
 
 // DummyProvider
 type DummyProvider struct{}

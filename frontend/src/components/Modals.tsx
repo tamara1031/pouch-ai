@@ -1,49 +1,66 @@
-import { useState, useEffect, useRef } from "preact/hooks";
-import type { Key } from "../types";
+import { useEffect } from "preact/hooks";
 import { usePluginInfo } from "../hooks/usePluginInfo";
 import CreateKeyModal from "./modals/CreateKeyModal";
 import EditKeyModal from "./modals/EditKeyModal";
 import NewKeyDisplayModal from "./modals/NewKeyDisplayModal";
+import {
+    isCreateModalOpen,
+    isEditModalOpen,
+    isNewKeyModalOpen,
+    editKeySignal,
+    newKeyRawSignal,
+    openNewKeyModal,
+    openEditModal
+} from "../hooks/useModalState";
 
 export default function Modals() {
-    const [editKey, setEditKey] = useState<Key | null>(null);
-    const [newKeyRaw, setNewKeyRaw] = useState<string | null>(null);
     const { middlewareInfo, providerInfo } = usePluginInfo();
 
-    const createModalRef = useRef<HTMLInputElement>(null);
-    const editModalRef = useRef<HTMLInputElement>(null);
-    const newKeyModalRef = useRef<HTMLInputElement>(null);
-
     useEffect(() => {
-        const handleOpenEdit = (e: any) => {
-            setEditKey(e.detail);
-            if (editModalRef.current) editModalRef.current.checked = true;
-        };
+        const handleOpenCreate = () => isCreateModalOpen.value = true;
+        const handleOpenEdit = (e: any) => openEditModal(e.detail);
 
+        window.addEventListener('open-create-modal', handleOpenCreate);
         window.addEventListener('open-edit-modal', handleOpenEdit);
-        return () => window.removeEventListener('open-edit-modal', handleOpenEdit);
+
+        return () => {
+            window.removeEventListener('open-create-modal', handleOpenCreate);
+            window.removeEventListener('open-edit-modal', handleOpenEdit);
+        };
     }, []);
 
     const handleCreateSuccess = (rawKey: string) => {
-        setNewKeyRaw(rawKey);
-        if (newKeyModalRef.current) newKeyModalRef.current.checked = true;
+        isCreateModalOpen.value = false;
+        openNewKeyModal(rawKey);
     };
 
     return (
         <>
-            <CreateKeyModal
-                modalRef={createModalRef}
-                onSuccess={handleCreateSuccess}
-                middlewareInfos={middlewareInfo}
-                providerInfos={providerInfo}
-            />
-            <EditKeyModal
-                modalRef={editModalRef}
-                editKey={editKey}
-                middlewareInfos={middlewareInfo}
-                providerInfos={providerInfo}
-            />
-            <NewKeyDisplayModal modalRef={newKeyModalRef} newKeyRaw={newKeyRaw} />
+            {isCreateModalOpen.value && (
+                <CreateKeyModal
+                    isOpen={isCreateModalOpen.value}
+                    onClose={() => isCreateModalOpen.value = false}
+                    onSuccess={handleCreateSuccess}
+                    middlewareInfos={middlewareInfo}
+                    providerInfos={providerInfo}
+                />
+            )}
+            {isEditModalOpen.value && (
+                <EditKeyModal
+                    isOpen={isEditModalOpen.value}
+                    onClose={() => isEditModalOpen.value = false}
+                    editKey={editKeySignal.value}
+                    middlewareInfos={middlewareInfo}
+                    providerInfos={providerInfo}
+                />
+            )}
+            {isNewKeyModalOpen.value && (
+                <NewKeyDisplayModal
+                    isOpen={isNewKeyModalOpen.value}
+                    onClose={() => isNewKeyModalOpen.value = false}
+                    newKeyRaw={newKeyRawSignal.value}
+                />
+            )}
         </>
     );
 }

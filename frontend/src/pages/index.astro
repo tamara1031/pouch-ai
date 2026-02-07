@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Dashboard from "../components/Dashboard";
+import Dashboard from "../components/features/keys/Dashboard";
 import Modals from "../components/Modals";
 ---
 
@@ -18,8 +18,8 @@ import Modals from "../components/Modals";
                     Manage your application's access to LLM providers.
                 </p>
             </div>
-            <label
-                for="create-key-modal"
+            <button
+                id="create-key-trigger"
                 class="btn btn-primary rounded-2xl px-8 h-14 shadow-2xl shadow-primary/25 gap-3 group border-none transform hover:scale-[1.02] active:scale-95 transition-all"
             >
                 <div
@@ -42,8 +42,16 @@ import Modals from "../components/Modals";
                 <span class="font-bold uppercase tracking-widest text-xs"
                     >Generate API Key</span
                 >
-            </label>
+            </button>
         </div>
+
+        <script>
+            document
+                .getElementById("create-key-trigger")
+                ?.addEventListener("click", () => {
+                    window.dispatchEvent(new CustomEvent("open-create-modal"));
+                });
+        </script>
 
         {/* Dynamic Dashboard - Client Island */}
         <Dashboard client:load />

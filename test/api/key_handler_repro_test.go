@@ -79,7 +79,8 @@ func TestKeyHandler_CreateKey_Validation(t *testing.T) {
 	// Setup
 	mockRepo := &MockRepository{}
 	registry := domain.NewProviderRegistry()
-	registry.Register(&MockProvider{})
+	p := &MockProvider{}
+	registry.Register(p.Name(), p)
 
 	mwReg := domain.NewMiddlewareRegistry()
 	keyService := service.NewKeyService(mockRepo, registry, mwReg)

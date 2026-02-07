@@ -37,7 +37,7 @@ func TestProxy_PassThrough(t *testing.T) {
 	// Registry
 	registry := domain.NewProviderRegistry()
 	provider := providers.NewOpenAIProvider("test-key", mockUpstream.URL, pricing, tokenCounter)
-	registry.Register(provider)
+	registry.Register(provider.Name(), provider)
 
 	// Service
 	executionHandler := engine.NewExecutionHandler(nil)

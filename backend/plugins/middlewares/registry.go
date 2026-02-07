@@ -5,7 +5,7 @@ import (
 )
 
 type MiddlewareBuiltin struct {
-	Info    domain.MiddlewareInfo
+	Info    domain.PluginInfo
 	Factory func(config map[string]any) domain.Middleware
 }
 

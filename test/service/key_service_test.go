@@ -31,6 +31,8 @@ type mockRegistry struct {
 	domain.ProviderRegistry
 }
 
+func (m *mockRegistry) Register(name string, item domain.Provider) {}
+
 func (m *mockRegistry) Get(name string) (domain.Provider, error) {
 	return nil, nil
 }
@@ -39,7 +41,7 @@ func (m *mockRegistry) List() []domain.Provider {
 	return nil
 }
 
-func (m *mockRegistry) ListInfo() []domain.ProviderInfo {
+func (m *mockRegistry) ListKeys() []string {
 	return nil
 }
 

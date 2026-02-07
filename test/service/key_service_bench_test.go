@@ -59,7 +59,7 @@ type BenchRegistry struct {
 	providers []domain.Provider
 }
 
-func (r *BenchRegistry) Register(p domain.Provider) {
+func (r *BenchRegistry) Register(name string, p domain.Provider) {
 	r.providers = append(r.providers, p)
 }
 
@@ -72,15 +72,22 @@ func (r *BenchRegistry) Get(name string) (domain.Provider, error) {
 	return nil, nil
 }
 
-func (r *BenchRegistry) List() []domain.Provider         { return r.providers }
-func (r *BenchRegistry) ListInfo() []domain.ProviderInfo { return nil }
+func (r *BenchRegistry) List() []domain.Provider { return r.providers }
+func (r *BenchRegistry) ListKeys() []string {
+	keys := make([]string, 0, len(r.providers))
+	for _, p := range r.providers {
+		keys = append(keys, p.Name())
+	}
+	return keys
+}
 
 func BenchmarkGetProviderUsage(b *testing.B) {
 	registry := &BenchRegistry{}
 	// Register 10 providers with 50ms delay each
 	for i := 0; i < 10; i++ {
-		registry.Register(&MockProvider{
-			name:  string(rune('A' + i)),
+		name := string(rune('A' + i))
+		registry.Register(name, &MockProvider{
+			name:  name,
 			delay: 50 * time.Millisecond,
 		})
 	}

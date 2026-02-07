@@ -101,11 +101,12 @@ func (s *ProxyService) buildChain(config *domain.KeyConfiguration) domain.Handle
 
 	var mws []domain.Middleware
 	for _, mwConfig := range config.Middlewares {
-		mw, err := s.mwRegistry.Get(mwConfig.ID, mwConfig.Config)
+		factory, err := s.mwRegistry.Get(mwConfig.ID)
 		if err != nil {
 			logger.L.Warn("middleware not found or failed to initialize", "id", mwConfig.ID, "error", err)
 			continue
 		}
+		mw := factory(mwConfig.Config)
 		mws = append(mws, mw)
 	}
 
