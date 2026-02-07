@@ -1,4 +1,5 @@
-import { useState, useRef } from "preact/hooks";
+import { useState, useRef, useEffect } from "preact/hooks";
+import { MiddlewareInfo } from "../../types";
 
 interface Props {
     modalRef: any;
@@ -8,6 +9,14 @@ interface Props {
 export default function CreateKeyModal({ modalRef, onSuccess }: Props) {
     const [createMode, setCreateMode] = useState<"prepaid" | "subscription">("prepaid");
     const [createProvider, setCreateProvider] = useState("openai");
+    const [availableMiddlewares, setAvailableMiddlewares] = useState<MiddlewareInfo[]>([]);
+
+    useEffect(() => {
+        fetch("/v1/config/plugins/middlewares")
+            .then(res => res.json())
+            .then(data => setAvailableMiddlewares(data.middlewares || []))
+            .catch(err => console.error("Failed to fetch middlewares:", err));
+    }, []);
 
     const handleCreateSubmit = async (e: Event) => {
         e.preventDefault();
@@ -25,17 +34,30 @@ export default function CreateKeyModal({ modalRef, onSuccess }: Props) {
             period = fd.get("budget_period") as string;
         }
 
-        const provider = fd.get("provider") || "openai";
+        const provider = (fd.get("provider") as string) || "openai";
+
+        const middlewares = [];
+        for (const mw of availableMiddlewares) {
+            if (fd.get(`mw_${mw.id}`) === "on") {
+                const config: Record<string, string> = {};
+                for (const key of Object.keys(mw.schema)) {
+                    const val = fd.get(`mw_cfg_${mw.id}_${key}`) as string;
+                    if (val) config[key] = val;
+                }
+                middlewares.push({ id: mw.id, config });
+            }
+        }
+
         const payload = {
             name: fd.get("name"),
             provider: provider,
             expires_at,
             budget_limit: parseFloat(fd.get("budget_limit") as string),
             budget_period: period,
-            is_mock: provider === "mock",
-            mock_config: fd.get("mock_config"),
             rate_limit: parseInt(fd.get("rate_limit") as string) || 10,
             rate_period: fd.get("rate_period") || "minute",
+            middlewares: middlewares,
+            mock_config: fd.get("mock_config"),
         };
 
         try {
@@ -128,6 +150,57 @@ export default function CreateKeyModal({ modalRef, onSuccess }: Props) {
                                         <option value="none">UNLT</option>
                                     </select>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-white/5 pt-6">
+                            <label class="label mb-4"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Plugins & Middleware</span></label>
+                            <div class="grid grid-cols-1 gap-4">
+                                {availableMiddlewares.map(mw => (
+                                    <div class="p-4 rounded-xl bg-white/5 border border-white/5 space-y-3" key={mw.id}>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs font-bold text-white/80">{mw.id.replace(/_/g, " ")}</span>
+                                            <input
+                                                type="checkbox"
+                                                name={`mw_${mw.id}`}
+                                                defaultChecked={true}
+                                                class="checkbox checkbox-primary checkbox-sm rounded-md"
+                                            />
+                                        </div>
+                                        {Object.keys(mw.schema).length > 0 && (
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-4 border-l border-white/10">
+                                                {Object.keys(mw.schema).map(key => {
+                                                    const schema = mw.schema[key];
+                                                    return (
+                                                        <div class="form-control" key={key}>
+                                                            <label class="label pt-0"><span class="label-text text-[10px] text-white/40 uppercase">{schema.description || key.replace(/_/g, " ")}</span></label>
+                                                            {schema.type === "select" ? (
+                                                                <select
+                                                                    name={`mw_cfg_${mw.id}_${key}`}
+                                                                    class="select select-bordered select-xs bg-white/5 border-white/5 rounded-lg text-[10px]"
+                                                                    defaultValue={schema.default}
+                                                                >
+                                                                    {schema.options?.map(opt => <option value={opt} key={opt}>{opt}</option>)}
+                                                                </select>
+                                                            ) : (
+                                                                <input
+                                                                    type={schema.type === "number" ? "number" : "text"}
+                                                                    name={`mw_cfg_${mw.id}_${key}`}
+                                                                    placeholder={schema.default}
+                                                                    defaultValue={schema.default}
+                                                                    class="input input-bordered input-xs bg-white/5 border-white/5 rounded-lg font-mono text-[10px]"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                {availableMiddlewares.length === 0 && (
+                                    <p class="text-[10px] text-white/20 italic col-span-2">No plugins found.</p>
+                                )}
                             </div>
                         </div>
 

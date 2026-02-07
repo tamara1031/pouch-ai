@@ -18,6 +18,10 @@ func (m *MockProvider) Name() string {
 	return m.name
 }
 
+func (m *MockProvider) Configure(config map[string]string) (domain.Provider, error) {
+	return m, nil
+}
+
 func (m *MockProvider) GetPricing(model domain.Model) (domain.Pricing, error) {
 	return domain.Pricing{}, nil
 }
@@ -83,7 +87,8 @@ func BenchmarkGetProviderUsage(b *testing.B) {
 	}
 
 	repo := &mockRepo{keys: make(map[domain.ID]*domain.Key)}
-	svc := service.NewKeyService(repo, registry)
+	mwReg := domain.NewMiddlewareRegistry()
+	svc := service.NewKeyService(repo, registry, mwReg)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

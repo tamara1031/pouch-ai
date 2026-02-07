@@ -37,19 +37,31 @@ type KeyResponse struct {
 
 func mapKeyToResponse(k *domain.Key) KeyResponse {
 	resp := KeyResponse{
-		ID:           int64(k.ID),
-		Name:         k.Name,
-		Provider:     k.Provider,
-		Prefix:       k.Prefix,
-		BudgetLimit:  k.Budget.Limit,
-		BudgetUsage:  k.Budget.Usage,
-		BudgetPeriod: k.Budget.Period,
-		IsMock:       k.IsMock,
-		MockConfig:   k.MockConfig,
-		RateLimit:    k.RateLimit.Limit,
-		RatePeriod:   k.RateLimit.Period,
-		CreatedAt:    k.CreatedAt.Unix(),
+		ID:          int64(k.ID),
+		Name:        k.Name,
+		Prefix:      k.Prefix,
+		BudgetUsage: k.BudgetUsage,
+		CreatedAt:   k.CreatedAt.Unix(),
 	}
+
+	if k.Configuration != nil {
+		resp.Provider = k.Configuration.Provider.ID
+		for _, m := range k.Configuration.Middlewares {
+			switch m.ID {
+			case "rate_limit":
+				fmt.Sscanf(m.Config["limit"], "%d", &resp.RateLimit)
+				resp.RatePeriod = m.Config["period"]
+			case "budget":
+				fmt.Sscanf(m.Config["limit"], "%f", &resp.BudgetLimit)
+				resp.BudgetPeriod = m.Config["period"]
+			}
+		}
+		if k.Configuration.Provider.ID == "mock" {
+			resp.IsMock = true
+			resp.MockConfig = k.Configuration.Provider.Config["mock_response"]
+		}
+	}
+
 	if k.ExpiresAt != nil {
 		ts := k.ExpiresAt.Unix()
 		resp.ExpiresAt = &ts
@@ -72,15 +84,16 @@ func (h *KeyHandler) ListKeys(c echo.Context) error {
 
 func (h *KeyHandler) CreateKey(c echo.Context) error {
 	var req struct {
-		Name         string  `json:"name"`
-		Provider     string  `json:"provider"`
-		ExpiresAt    *int64  `json:"expires_at"`
-		BudgetLimit  float64 `json:"budget_limit"`
-		BudgetPeriod string  `json:"budget_period"`
-		IsMock       bool    `json:"is_mock"`
-		MockConfig   string  `json:"mock_config"`
-		RateLimit    int     `json:"rate_limit"`
-		RatePeriod   string  `json:"rate_period"`
+		Name         string                `json:"name"`
+		Provider     string                `json:"provider"`
+		ExpiresAt    *int64                `json:"expires_at"`
+		BudgetLimit  float64               `json:"budget_limit"`
+		BudgetPeriod string                `json:"budget_period"`
+		IsMock       bool                  `json:"is_mock"`
+		MockConfig   string                `json:"mock_config"`
+		RateLimit    int                   `json:"rate_limit"`
+		RatePeriod   string                `json:"rate_period"`
+		Middlewares  []domain.PluginConfig `json:"middlewares"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return BadRequest(c, err.Error())
@@ -96,6 +109,7 @@ func (h *KeyHandler) CreateKey(c echo.Context) error {
 		RatePeriod:   req.RatePeriod,
 		IsMock:       req.IsMock,
 		MockConfig:   req.MockConfig,
+		Middlewares:  req.Middlewares,
 	}
 
 	raw, _, err := h.service.CreateKey(c.Request().Context(), input)
@@ -118,29 +132,29 @@ func (h *KeyHandler) UpdateKey(c echo.Context) error {
 	}
 
 	var req struct {
-		Name        string  `json:"name"`
-		Provider    string  `json:"provider"`
-		BudgetLimit float64 `json:"budget_limit"`
-		IsMock      bool    `json:"is_mock"`
-		MockConfig  string  `json:"mock_config"`
-		RateLimit   int     `json:"rate_limit"`
-		RatePeriod  string  `json:"rate_period"`
-		ExpiresAt   *int64  `json:"expires_at"`
+		Name         string                `json:"name"`
+		Provider     string                `json:"provider"`
+		BudgetLimit  float64               `json:"budget_limit"`
+		BudgetPeriod string                `json:"budget_period"`
+		RateLimit    int                   `json:"rate_limit"`
+		RatePeriod   string                `json:"rate_period"`
+		ExpiresAt    *int64                `json:"expires_at"`
+		Middlewares  []domain.PluginConfig `json:"middlewares"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return BadRequest(c, err.Error())
 	}
 
 	input := service.UpdateKeyInput{
-		ID:          id,
-		Name:        req.Name,
-		Provider:    req.Provider,
-		BudgetLimit: req.BudgetLimit,
-		RateLimit:   req.RateLimit,
-		RatePeriod:  req.RatePeriod,
-		IsMock:      req.IsMock,
-		MockConfig:  req.MockConfig,
-		ExpiresAt:   req.ExpiresAt,
+		ID:           id,
+		Name:         req.Name,
+		Provider:     req.Provider,
+		BudgetLimit:  req.BudgetLimit,
+		BudgetPeriod: req.BudgetPeriod,
+		RateLimit:    req.RateLimit,
+		RatePeriod:   req.RatePeriod,
+		ExpiresAt:    req.ExpiresAt,
+		Middlewares:  req.Middlewares,
 	}
 
 	err = h.service.UpdateKey(c.Request().Context(), input)
@@ -182,5 +196,15 @@ func (h *KeyHandler) ListProviders(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, echo.Map{
 		"providers": providers,
+	})
+}
+
+func (h *KeyHandler) ListMiddlewares(c echo.Context) error {
+	mws, err := h.service.ListMiddlewares(c.Request().Context())
+	if err != nil {
+		return InternalError(c, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"middlewares": mws,
 	})
 }

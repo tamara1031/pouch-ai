@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"pouch-ai/backend/domain"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -17,17 +18,19 @@ type cachedKey struct {
 }
 
 type KeyService struct {
-	repo     domain.Repository
-	registry domain.Registry
-	cache    map[string]cachedKey
-	cacheMu  sync.RWMutex
+	repo       domain.Repository
+	registry   domain.Registry
+	mwRegistry domain.MiddlewareRegistry
+	cache      map[string]cachedKey
+	cacheMu    sync.RWMutex
 }
 
-func NewKeyService(repo domain.Repository, registry domain.Registry) *KeyService {
+func NewKeyService(repo domain.Repository, registry domain.Registry, mwRegistry domain.MiddlewareRegistry) *KeyService {
 	return &KeyService{
-		repo:     repo,
-		registry: registry,
-		cache:    make(map[string]cachedKey),
+		repo:       repo,
+		registry:   registry,
+		mwRegistry: mwRegistry,
+		cache:      make(map[string]cachedKey),
 	}
 }
 
@@ -41,6 +44,7 @@ type CreateKeyInput struct {
 	RatePeriod   string
 	IsMock       bool
 	MockConfig   string
+	Middlewares  []domain.PluginConfig
 }
 
 func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (string, *domain.Key, error) {
@@ -58,21 +62,31 @@ func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (strin
 	hash := s.hashKey(rawKey)
 	prefix := rawKey[:8]
 
+	// Use provided middlewares if any, otherwise use defaults
+	mws := input.Middlewares
+	if len(mws) == 0 {
+		mws = []domain.PluginConfig{
+			{ID: "rate_limit", Config: map[string]string{"limit": strconv.Itoa(input.RateLimit), "period": input.RatePeriod}},
+			{ID: "budget", Config: map[string]string{"limit": strconv.FormatFloat(input.BudgetLimit, 'f', -1, 64), "period": input.BudgetPeriod}},
+			{ID: "key_validation", Config: make(map[string]string)},
+			{ID: "budget_reset", Config: make(map[string]string)},
+			{ID: "usage_tracking", Config: make(map[string]string)},
+		}
+	}
+
 	k := &domain.Key{
-		Name:     input.Name,
-		Provider: input.Provider,
-		KeyHash:  hash,
-		Prefix:   prefix,
-		Budget: domain.Budget{
-			Limit:  input.BudgetLimit,
-			Period: input.BudgetPeriod,
+		ID:      0, // Will be set by repo
+		Name:    input.Name,
+		KeyHash: hash,
+		Prefix:  prefix,
+		Configuration: &domain.KeyConfiguration{
+			Provider: domain.PluginConfig{
+				ID:     input.Provider,
+				Config: map[string]string{"mock_response": input.MockConfig},
+			},
+			Middlewares: mws,
 		},
-		RateLimit: domain.RateLimit{
-			Limit:  input.RateLimit,
-			Period: input.RatePeriod,
-		},
-		IsMock:      input.IsMock,
-		MockConfig:  input.MockConfig,
+		BudgetUsage: 0,
 		LastResetAt: time.Now(),
 		CreatedAt:   time.Now(),
 	}
@@ -129,15 +143,17 @@ func (s *KeyService) ListKeys(ctx context.Context) ([]*domain.Key, error) {
 }
 
 type UpdateKeyInput struct {
-	ID          int64
-	Name        string
-	Provider    string
-	BudgetLimit float64
-	RateLimit   int
-	RatePeriod  string
-	IsMock      bool
-	MockConfig  string
-	ExpiresAt   *int64
+	ID           int64
+	Name         string
+	Provider     string
+	BudgetLimit  float64
+	BudgetPeriod string
+	RateLimit    int
+	RatePeriod   string
+	IsMock       bool
+	MockConfig   string
+	ExpiresAt    *int64
+	Middlewares  []domain.PluginConfig
 }
 
 func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error {
@@ -149,19 +165,34 @@ func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error 
 		return fmt.Errorf("key not found")
 	}
 
-	if input.Provider != "" && input.Provider != k.Provider {
+	if input.Provider != "" {
 		if _, err := s.registry.Get(input.Provider); err != nil {
 			return err
 		}
 	}
 
 	k.Name = input.Name
-	k.Provider = input.Provider
-	k.Budget.Limit = input.BudgetLimit
-	k.IsMock = input.IsMock
-	k.MockConfig = input.MockConfig
-	k.RateLimit.Limit = input.RateLimit
-	k.RateLimit.Period = input.RatePeriod
+	if k.Configuration == nil {
+		k.Configuration = &domain.KeyConfiguration{}
+	}
+	k.Configuration.Provider = domain.PluginConfig{
+		ID:     input.Provider,
+		Config: map[string]string{"mock_response": input.MockConfig},
+	}
+
+	// Use provided middlewares if any, otherwise update core ones
+	if len(input.Middlewares) > 0 {
+		k.Configuration.Middlewares = input.Middlewares
+	} else {
+		// Dynamic update of core middleware configs
+		k.Configuration.Middlewares = []domain.PluginConfig{
+			{ID: "rate_limit", Config: map[string]string{"limit": strconv.Itoa(input.RateLimit), "period": input.RatePeriod}},
+			{ID: "budget", Config: map[string]string{"limit": strconv.FormatFloat(input.BudgetLimit, 'f', -1, 64), "period": input.BudgetPeriod}},
+			{ID: "key_validation", Config: make(map[string]string)},
+			{ID: "budget_reset", Config: make(map[string]string)},
+			{ID: "usage_tracking", Config: make(map[string]string)},
+		}
+	}
 
 	if input.ExpiresAt != nil {
 		t := time.Unix(*input.ExpiresAt, 0)
@@ -217,7 +248,7 @@ func (s *KeyService) IncrementUsage(ctx context.Context, key *domain.Key, amount
 
 	s.cacheMu.Lock()
 	if entry, ok := s.cache[key.KeyHash]; ok {
-		entry.key.Budget.Usage += amount
+		entry.key.BudgetUsage += amount
 	}
 	s.cacheMu.Unlock()
 
@@ -258,6 +289,10 @@ func (s *KeyService) ListProviders(ctx context.Context) ([]string, error) {
 	return names, nil
 }
 
+func (s *KeyService) ListMiddlewares(ctx context.Context) ([]domain.MiddlewareInfo, error) {
+	return s.mwRegistry.List(), nil
+}
+
 // Helpers
 
 func (s *KeyService) generateRandomKey() (string, error) {
@@ -282,6 +317,10 @@ func (s *KeyService) copyKey(k *domain.Key) *domain.Key {
 	if k.ExpiresAt != nil {
 		t := *k.ExpiresAt
 		copy.ExpiresAt = &t
+	}
+	if k.Configuration != nil {
+		cfg := *k.Configuration
+		copy.Configuration = &cfg
 	}
 	return &copy
 }

@@ -3,6 +3,7 @@ package infra
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"pouch-ai/backend/domain"
 	"time"
 )
@@ -22,10 +23,15 @@ func (r *SQLiteKeyRepository) Save(ctx context.Context, k *domain.Key) error {
 		expiresAt = &val
 	}
 
+	configJSON, err := json.Marshal(k.Configuration)
+	if err != nil {
+		return err
+	}
+
 	res, err := r.db.ExecContext(ctx, `
-		INSERT INTO app_keys (name, provider, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, k.Name, k.Provider, k.KeyHash, k.Prefix, expiresAt, k.Budget.Limit, k.Budget.Usage, k.Budget.Period, k.LastResetAt.Unix(), k.IsMock, k.MockConfig, k.RateLimit.Limit, k.RateLimit.Period, k.CreatedAt.Unix())
+		INSERT INTO app_keys (name, key_hash, prefix, expires_at, budget_usage, last_reset_at, configuration, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, k.Name, k.KeyHash, k.Prefix, expiresAt, k.BudgetUsage, k.LastResetAt.Unix(), string(configJSON), k.CreatedAt.Unix())
 
 	if err != nil {
 		return err
@@ -40,7 +46,7 @@ func (r *SQLiteKeyRepository) Save(ctx context.Context, k *domain.Key) error {
 
 func (r *SQLiteKeyRepository) GetByID(ctx context.Context, id domain.ID) (*domain.Key, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, name, provider, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at
+		SELECT id, name, key_hash, prefix, expires_at, budget_usage, last_reset_at, configuration, created_at
 		FROM app_keys WHERE id = ?
 	`, id)
 	return r.scanKey(row)
@@ -48,7 +54,7 @@ func (r *SQLiteKeyRepository) GetByID(ctx context.Context, id domain.ID) (*domai
 
 func (r *SQLiteKeyRepository) GetByHash(ctx context.Context, hash string) (*domain.Key, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, name, provider, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at
+		SELECT id, name, key_hash, prefix, expires_at, budget_usage, last_reset_at, configuration, created_at
 		FROM app_keys WHERE key_hash = ?
 	`, hash)
 	return r.scanKey(row)
@@ -56,7 +62,7 @@ func (r *SQLiteKeyRepository) GetByHash(ctx context.Context, hash string) (*doma
 
 func (r *SQLiteKeyRepository) List(ctx context.Context) ([]*domain.Key, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, name, provider, key_hash, prefix, expires_at, budget_limit, budget_usage, budget_period, last_reset_at, is_mock, mock_config, rate_limit, rate_period, created_at
+		SELECT id, name, key_hash, prefix, expires_at, budget_usage, last_reset_at, configuration, created_at
 		FROM app_keys ORDER BY created_at DESC
 	`)
 	if err != nil {
@@ -76,11 +82,16 @@ func (r *SQLiteKeyRepository) List(ctx context.Context) ([]*domain.Key, error) {
 }
 
 func (r *SQLiteKeyRepository) Update(ctx context.Context, k *domain.Key) error {
-	_, err := r.db.ExecContext(ctx, `
+	configJSON, err := json.Marshal(k.Configuration)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.db.ExecContext(ctx, `
 		UPDATE app_keys 
-		SET name = ?, provider = ?, budget_limit = ?, is_mock = ?, mock_config = ?, rate_limit = ?, rate_period = ?
+		SET name = ?, configuration = ?
 		WHERE id = ?
-	`, k.Name, k.Provider, k.Budget.Limit, k.IsMock, k.MockConfig, k.RateLimit.Limit, k.RateLimit.Period, k.ID)
+	`, k.Name, string(configJSON), k.ID)
 	return err
 }
 
@@ -107,12 +118,11 @@ func (r *SQLiteKeyRepository) scanKey(sc interface {
 	var k domain.Key
 	var expiresAt sql.NullInt64
 	var lastResetAt, createdAt int64
+	var configStr sql.NullString
 
 	err := sc.Scan(
-		&k.ID, &k.Name, &k.Provider, &k.KeyHash, &k.Prefix, &expiresAt,
-		&k.Budget.Limit, &k.Budget.Usage, &k.Budget.Period,
-		&lastResetAt, &k.IsMock, &k.MockConfig,
-		&k.RateLimit.Limit, &k.RateLimit.Period,
+		&k.ID, &k.Name, &k.KeyHash, &k.Prefix, &expiresAt,
+		&k.BudgetUsage, &lastResetAt, &configStr,
 		&createdAt,
 	)
 
@@ -129,6 +139,13 @@ func (r *SQLiteKeyRepository) scanKey(sc interface {
 	}
 	k.LastResetAt = time.Unix(lastResetAt, 0)
 	k.CreatedAt = time.Unix(createdAt, 0)
+
+	if configStr.Valid && configStr.String != "" {
+		var cfg domain.KeyConfiguration
+		if err := json.Unmarshal([]byte(configStr.String), &cfg); err == nil {
+			k.Configuration = &cfg
+		}
+	}
 
 	return &k, nil
 }

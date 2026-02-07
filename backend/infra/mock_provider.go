@@ -9,18 +9,30 @@ import (
 	"net/http/httptest"
 	"pouch-ai/backend/domain"
 	"strings"
+	"sync"
 	"time"
 )
 
 type MockProvider struct {
 	server *httptest.Server
+	config map[string]string
+	mu     *sync.RWMutex
 }
 
 func NewMockProvider() *MockProvider {
-	p := &MockProvider{}
-	// Start a local server that responds to requests
+	p := &MockProvider{
+		config: make(map[string]string),
+		mu:     &sync.RWMutex{},
+	}
 	p.server = httptest.NewServer(http.HandlerFunc(p.handleRequest))
 	return p
+}
+
+func (p *MockProvider) Configure(config map[string]string) (domain.Provider, error) {
+	newP := *p
+	// Share the server and lock, but copy the config
+	newP.config = config
+	return &newP, nil
 }
 
 func (p *MockProvider) Name() string {
@@ -177,7 +189,15 @@ func (p *MockProvider) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responseContent := "This is a mock response from the Pouch AI Mock Provider."
-	if len(req.Messages) > 0 {
+	p.mu.RLock()
+	if customResp, ok := p.config["mock_response"]; ok && customResp != "" {
+		// If it's a valid JSON response from the user, we try to use it
+		// For the simplest case, we just use it as the content of a successful response
+		responseContent = customResp
+	}
+	p.mu.RUnlock()
+
+	if len(req.Messages) > 0 && responseContent == "This is a mock response from the Pouch AI Mock Provider." {
 		lastMsg := req.Messages[len(req.Messages)-1]
 		responseContent = fmt.Sprintf("Mock response to: %q", lastMsg.Content)
 	}
@@ -256,8 +276,8 @@ func (p *MockProvider) handleRequest(w http.ResponseWriter, r *http.Request) {
 				"model":   req.Model,
 				"choices": []map[string]interface{}{
 					{
-						"index": 0,
-						"delta": map[string]interface{}{},
+						"index":         0,
+						"delta":         map[string]interface{}{},
 						"finish_reason": "stop",
 					},
 				},

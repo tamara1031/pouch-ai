@@ -37,7 +37,8 @@ func (m *mockRegistry) Get(name string) (domain.Provider, error) {
 func TestKeyService_CreateKey(t *testing.T) {
 	repo := &mockRepo{keys: make(map[domain.ID]*domain.Key)}
 	reg := &mockRegistry{}
-	svc := service.NewKeyService(repo, reg)
+	mwReg := domain.NewMiddlewareRegistry()
+	svc := service.NewKeyService(repo, reg, mwReg)
 
 	input := service.CreateKeyInput{
 		Name:         "test-key",
@@ -64,7 +65,8 @@ func TestKeyService_CreateKey(t *testing.T) {
 func TestKeyService_VerifyKey(t *testing.T) {
 	repo := &mockRepo{keys: make(map[domain.ID]*domain.Key)}
 	reg := &mockRegistry{}
-	svc := service.NewKeyService(repo, reg)
+	mwReg := domain.NewMiddlewareRegistry()
+	svc := service.NewKeyService(repo, reg, mwReg)
 
 	input := service.CreateKeyInput{
 		Name:         "test-key",

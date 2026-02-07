@@ -58,17 +58,29 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	// TODO: Add more providers (Anthropic, Gemini, etc.) here
 
 	// 3. Initialize Application Services
-	keyService := service.NewKeyService(keyRepo, registry)
+	mwRegistry := domain.NewMiddlewareRegistry()
+	keyService := service.NewKeyService(keyRepo, registry, mwRegistry)
 
 	executionHandler := infra.NewExecutionHandler(keyRepo)
-	proxyService := service.NewProxyService(
-		executionHandler,
-		service_mw.NewRateLimitMiddleware(),               // Shut out request if rate limit is exceeded
-		service_mw.NewBudgetResetMiddleware(keyService),   // Reset budget if needed
-		service_mw.NewKeyValidationMiddleware(),           // check if key is expired
-		service_mw.NewUsageTrackingMiddleware(keyService), // add usage and check if budget will be exceeded
-		// MockMiddleware removed as MockProvider is used
-	)
+	mwRegistry.Register("key_validation", service_mw.NewKeyValidationMiddleware, domain.MiddlewareSchema{})
+	mwRegistry.Register("usage_tracking", service_mw.NewUsageTrackingMiddleware(keyService), domain.MiddlewareSchema{})
+	mwRegistry.Register("rate_limit", service_mw.NewRateLimitMiddleware, domain.MiddlewareSchema{
+		"limit":  {Type: domain.FieldTypeNumber, Default: "10", Description: "Requests per period"},
+		"period": {Type: domain.FieldTypeSelect, Options: []string{"minute", "second"}, Default: "minute"},
+	})
+	mwRegistry.Register("budget", service_mw.NewUsageTrackingMiddleware(keyService), domain.MiddlewareSchema{
+		"limit":  {Type: domain.FieldTypeNumber, Default: "5.00", Description: "Budget limit in USD"},
+		"period": {Type: domain.FieldTypeSelect, Options: []string{"monthly", "weekly", "daily", "none"}, Default: "monthly"},
+	})
+	mwRegistry.Register("budget_reset", service_mw.NewBudgetResetMiddleware(keyService), domain.MiddlewareSchema{})
+
+	// Load external plugins
+	pluginManager := infra.NewPluginManager(mwRegistry, "./plugins/middlewares")
+	if err := pluginManager.LoadPlugins(); err != nil {
+		fmt.Printf("WARN: Failed to load external plugins: %v\n", err)
+	}
+
+	proxyService := service.NewProxyService(executionHandler, mwRegistry)
 
 	// 4. Initialize Handlers
 	keyHandler := api.NewKeyHandler(keyService)

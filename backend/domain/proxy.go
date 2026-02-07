@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 )
@@ -22,6 +23,29 @@ type Response struct {
 	PromptTokens int
 	OutputTokens int
 	TotalCost    float64
+}
+
+type FieldType string
+
+const (
+	FieldTypeString  FieldType = "string"
+	FieldTypeNumber  FieldType = "number"
+	FieldTypeBoolean FieldType = "boolean"
+	FieldTypeSelect  FieldType = "select"
+)
+
+type FieldSchema struct {
+	Type        FieldType `json:"type"`
+	Default     string    `json:"default,omitempty"`
+	Description string    `json:"description,omitempty"`
+	Options     []string  `json:"options,omitempty"`
+}
+
+type MiddlewareSchema map[string]FieldSchema
+
+type MiddlewareInfo struct {
+	ID     string           `json:"id"`
+	Schema MiddlewareSchema `json:"schema"`
 }
 
 type Handler interface {
@@ -67,4 +91,46 @@ type HandlerFunc func(req *Request) (*Response, error)
 
 func (f HandlerFunc) Handle(req *Request) (*Response, error) {
 	return f(req)
+}
+
+type MiddlewareRegistry interface {
+	Register(id string, factory func(config map[string]string) Middleware, schema MiddlewareSchema)
+	Get(id string, config map[string]string) (Middleware, error)
+	List() []MiddlewareInfo
+}
+
+type DefaultMiddlewareRegistry struct {
+	plugins map[string]regEntry
+}
+
+type regEntry struct {
+	factory func(config map[string]string) Middleware
+	schema  MiddlewareSchema
+}
+
+func NewMiddlewareRegistry() MiddlewareRegistry {
+	return &DefaultMiddlewareRegistry{plugins: make(map[string]regEntry)}
+}
+
+func (r *DefaultMiddlewareRegistry) Register(id string, factory func(config map[string]string) Middleware, schema MiddlewareSchema) {
+	r.plugins[id] = regEntry{factory: factory, schema: schema}
+}
+
+func (r *DefaultMiddlewareRegistry) Get(id string, config map[string]string) (Middleware, error) {
+	entry, ok := r.plugins[id]
+	if !ok {
+		return nil, fmt.Errorf("middleware not found: %s", id)
+	}
+	return entry.factory(config), nil
+}
+
+func (r *DefaultMiddlewareRegistry) List() []MiddlewareInfo {
+	var infos []MiddlewareInfo
+	for id, entry := range r.plugins {
+		infos = append(infos, MiddlewareInfo{
+			ID:     id,
+			Schema: entry.schema,
+		})
+	}
+	return infos
 }

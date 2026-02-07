@@ -70,7 +70,7 @@ func (m *MockRepository) Delete(ctx context.Context, id domain.ID) error {
 func (m *MockRepository) IncrementUsage(ctx context.Context, id domain.ID, amount float64) error {
 	for _, k := range m.keys {
 		if k.ID == id {
-			k.Budget.Usage += amount
+			k.BudgetUsage += amount
 			return nil
 		}
 	}
@@ -80,7 +80,7 @@ func (m *MockRepository) IncrementUsage(ctx context.Context, id domain.ID, amoun
 func (m *MockRepository) ResetUsage(ctx context.Context, id domain.ID, lastResetAt time.Time) error {
 	for _, k := range m.keys {
 		if k.ID == id {
-			k.Budget.Usage = 0
+			k.BudgetUsage = 0
 			k.LastResetAt = lastResetAt
 			return nil
 		}
@@ -101,6 +101,9 @@ func (m *MockRegistry) List() []domain.Provider { return nil }
 type DummyProvider struct{}
 
 func (d *DummyProvider) Name() string { return "dummy" }
+func (d *DummyProvider) Configure(config map[string]string) (domain.Provider, error) {
+	return d, nil
+}
 func (d *DummyProvider) GetPricing(model domain.Model) (domain.Pricing, error) {
 	return domain.Pricing{}, nil
 }
@@ -126,7 +129,8 @@ func (d *DummyProvider) ProcessStreamChunk(chunk []byte) (string, error) {
 func BenchmarkVerifyKey(b *testing.B) {
 	repo := NewMockRepository()
 	registry := &MockRegistry{}
-	svc := NewKeyService(repo, registry)
+	mwReg := domain.NewMiddlewareRegistry()
+	svc := NewKeyService(repo, registry, mwReg)
 
 	// Create a key manually to avoid needing CreateKey internals
 	rawKey := "pa-benchmarkkey1234567890"
@@ -134,10 +138,12 @@ func BenchmarkVerifyKey(b *testing.B) {
 	hashStr := hex.EncodeToString(hash[:])
 
 	k := &domain.Key{
-		ID:       1,
-		Name:     "Bench Key",
-		Provider: "dummy",
-		KeyHash:  hashStr,
+		ID:   1,
+		Name: "Bench Key",
+		Configuration: &domain.KeyConfiguration{
+			Provider: domain.PluginConfig{ID: "dummy"},
+		},
+		KeyHash: hashStr,
 	}
 	repo.Save(context.Background(), k)
 

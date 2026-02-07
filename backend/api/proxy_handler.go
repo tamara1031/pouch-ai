@@ -39,10 +39,10 @@ func (h *ProxyHandler) Proxy(c echo.Context) error {
 	}
 
 	// Identify Provider
-	provName := appKey.Provider
-	if provName == "" {
-		return BadRequest(c, "Provider not specified for this key")
+	if appKey.Configuration == nil || appKey.Configuration.Provider.ID == "" {
+		return BadRequest(c, "Provider not configured for this key")
 	}
+	provName := appKey.Configuration.Provider.ID
 	prov, err := h.registry.Get(provName)
 	if err != nil {
 		return InternalError(c, "Provider not found")

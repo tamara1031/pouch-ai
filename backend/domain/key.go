@@ -13,30 +13,26 @@ const MaxKeyNameLength = 50
 
 type ID int64
 
-type Budget struct {
-	Limit  float64 `json:"limit"`
-	Usage  float64 `json:"usage"`
-	Period string  `json:"period"` // "monthly", "weekly", "none"
+type PluginConfig struct {
+	ID     string            `json:"id"`
+	Config map[string]string `json:"config,omitempty"`
 }
 
-type RateLimit struct {
-	Limit  int    `json:"limit"`
-	Period string `json:"period"` // "second", "minute", "none"
+type KeyConfiguration struct {
+	Provider    PluginConfig   `json:"provider"`
+	Middlewares []PluginConfig `json:"middlewares"`
 }
 
 type Key struct {
-	ID          ID         `json:"id"`
-	Name        string     `json:"name"`
-	Provider    string     `json:"provider"` // "openai", "anthropic", etc.
-	KeyHash     string     `json:"key_hash"`
-	Prefix      string     `json:"prefix"`
-	ExpiresAt   *time.Time `json:"expires_at"`
-	Budget      Budget     `json:"budget"`
-	RateLimit   RateLimit  `json:"rate_limit"`
-	IsMock      bool       `json:"is_mock"`
-	MockConfig  string     `json:"mock_config"`
-	LastResetAt time.Time  `json:"last_reset_at"`
-	CreatedAt   time.Time  `json:"created_at"`
+	ID            ID                `json:"id"`
+	Name          string            `json:"name"`
+	KeyHash       string            `json:"key_hash"`
+	Prefix        string            `json:"prefix"`
+	ExpiresAt     *time.Time        `json:"expires_at"`
+	BudgetUsage   float64           `json:"budget_usage"`
+	LastResetAt   time.Time         `json:"last_reset_at"`
+	CreatedAt     time.Time         `json:"created_at"`
+	Configuration *KeyConfiguration `json:"configuration"`
 }
 
 func (k *Key) IsExpired() bool {
@@ -47,20 +43,44 @@ func (k *Key) IsExpired() bool {
 }
 
 func (k *Key) IsBudgetExceeded() bool {
-	if k.Budget.Limit <= 0 {
+	if k.Configuration == nil {
 		return false
 	}
-	return k.Budget.Usage >= k.Budget.Limit
+	// Find budget middleware or provider limit
+	for _, m := range k.Configuration.Middlewares {
+		if m.ID == "budget" {
+			limitStr := m.Config["limit"]
+			var limit float64
+			fmt.Sscanf(limitStr, "%f", &limit)
+			if limit <= 0 {
+				return false
+			}
+			return k.BudgetUsage >= limit
+		}
+	}
+	return false
 }
 
 func (k *Key) NeedsReset() bool {
-	if k.Budget.Period == "" || k.Budget.Period == "none" {
+	if k.Configuration == nil {
+		return false
+	}
+
+	var period string
+	for _, m := range k.Configuration.Middlewares {
+		if m.ID == "budget" {
+			period = m.Config["period"]
+			break
+		}
+	}
+
+	if period == "" || period == "none" {
 		return false
 	}
 
 	now := time.Now()
 	var duration time.Duration
-	switch k.Budget.Period {
+	switch period {
 	case "weekly":
 		duration = 7 * 24 * time.Hour
 	case "monthly":
@@ -73,7 +93,7 @@ func (k *Key) NeedsReset() bool {
 }
 
 func (k *Key) ResetUsage() {
-	k.Budget.Usage = 0
+	k.BudgetUsage = 0
 	k.LastResetAt = time.Now()
 }
 
@@ -87,22 +107,8 @@ func (k *Key) Validate() error {
 	if !keyNameRegex.MatchString(k.Name) {
 		return fmt.Errorf("key name contains invalid characters")
 	}
-	if k.Provider == "" {
+	if k.Configuration == nil || k.Configuration.Provider.ID == "" {
 		return fmt.Errorf("provider is required")
-	}
-
-	switch k.Budget.Period {
-	case "monthly", "weekly", "none", "":
-		// OK
-	default:
-		return fmt.Errorf("invalid budget period: %s", k.Budget.Period)
-	}
-
-	switch k.RateLimit.Period {
-	case "second", "minute", "none", "":
-		// OK
-	default:
-		return fmt.Errorf("invalid rate limit period: %s", k.RateLimit.Period)
 	}
 
 	return nil

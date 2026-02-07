@@ -6,13 +6,20 @@ interface Props {
     editKey: Key | null;
 }
 
+import { MiddlewareInfo } from "../../types";
+
 export default function EditKeyModal({ modalRef, editKey }: Props) {
     const [editProvider, setEditProvider] = useState("openai");
+    const [availableMiddlewares, setAvailableMiddlewares] = useState<MiddlewareInfo[]>([]);
 
     useEffect(() => {
         if (editKey) {
             setEditProvider(editKey.provider);
         }
+        fetch("/v1/config/plugins/middlewares")
+            .then(res => res.json())
+            .then(data => setAvailableMiddlewares(data.middlewares || []))
+            .catch(err => console.error("Failed to fetch middlewares:", err));
     }, [editKey]);
 
     const handleEditSubmit = async (e: Event) => {
@@ -21,16 +28,28 @@ export default function EditKeyModal({ modalRef, editKey }: Props) {
 
         const form = e.target as HTMLFormElement;
         const fd = new FormData(form);
-        const provider = fd.get("provider");
+        const provider = fd.get("provider") as string;
+
+        const middlewares = [];
+        for (const mw of availableMiddlewares) {
+            if (fd.get(`mw_${mw.id}`) === "on") {
+                const config: Record<string, string> = {};
+                for (const key of Object.keys(mw.schema)) {
+                    const val = fd.get(`mw_cfg_${mw.id}_${key}`) as string;
+                    if (val) config[key] = val;
+                }
+                middlewares.push({ id: mw.id, config });
+            }
+        }
 
         const payload = {
             name: fd.get("name"),
             provider: provider,
             budget_limit: parseFloat(fd.get("budget_limit") as string),
-            is_mock: provider === "mock",
-            mock_config: fd.get("mock_config"),
             rate_limit: parseInt(fd.get("rate_limit") as string),
             rate_period: fd.get("rate_period") || "minute",
+            middlewares: middlewares,
+            mock_config: fd.get("mock_config"),
         };
 
         try {
@@ -91,6 +110,29 @@ export default function EditKeyModal({ modalRef, editKey }: Props) {
                                     </div>
                                 </div>
                             </div>
+                            <div class="border-t border-white/5 pt-6">
+                                <label class="label mb-4"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Plugins & Middleware</span></label>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {[
+                                        { id: "rate_limit", name: "Rate Limiting" },
+                                        { id: "budget", name: "Budget Enforcement" },
+                                        { id: "key_validation", name: "Key Validation" },
+                                        { id: "budget_reset", name: "Auto Budget Reset" },
+                                        { id: "usage_tracking", name: "Usage Tracking" }
+                                    ].map(mw => (
+                                        <div class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
+                                            <span class="text-xs font-bold text-white/80">{mw.name}</span>
+                                            <input
+                                                type="checkbox"
+                                                name={`mw_${mw.id}`}
+                                                defaultChecked={editKey.configuration?.middlewares?.some(m => m.id === mw.id) ?? true}
+                                                class="checkbox checkbox-primary checkbox-sm rounded-md"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                             {editProvider === "mock" && (
                                 <div class="form-control p-4 rounded-xl bg-white/5 border border-white/5">
                                     <label class="label mb-2">

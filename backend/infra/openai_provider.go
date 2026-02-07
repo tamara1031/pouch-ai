@@ -37,6 +37,17 @@ func NewOpenAIProvider(apiKey string, baseURL string, pricing *OpenAIPricing, co
 	}
 }
 
+func (p *OpenAIProvider) Configure(config map[string]string) (domain.Provider, error) {
+	newP := *p
+	if val, ok := config["api_key"]; ok {
+		newP.apiKey = val
+	}
+	if val, ok := config["base_url"]; ok {
+		newP.baseURL = strings.TrimSuffix(val, "/")
+	}
+	return &newP, nil
+}
+
 func (p *OpenAIProvider) Name() string {
 	return "openai"
 }
@@ -63,7 +74,9 @@ func (p *OpenAIProvider) PrepareHTTPRequest(ctx context.Context, model domain.Mo
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+p.apiKey)
+	if p.apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+p.apiKey)
+	}
 	return req, nil
 }
 

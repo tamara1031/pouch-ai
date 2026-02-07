@@ -28,6 +28,7 @@ type Usage struct {
 
 type Provider interface {
 	Name() string
+	Configure(config map[string]string) (Provider, error)
 	GetPricing(model Model) (Pricing, error)
 	CountTokens(model Model, text string) (int, error)
 	PrepareHTTPRequest(ctx context.Context, model Model, body []byte) (*http.Request, error)

@@ -14,6 +14,9 @@ import (
 type TestMockProvider struct{}
 
 func (m *TestMockProvider) Name() string { return "mock" }
+func (m *TestMockProvider) Configure(config map[string]string) (domain.Provider, error) {
+	return m, nil
+}
 func (m *TestMockProvider) GetPricing(model domain.Model) (domain.Pricing, error) {
 	return domain.Pricing{}, nil
 }
