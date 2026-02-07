@@ -144,6 +144,28 @@ func (p *OpenAIProvider) ParseOutputUsage(model domain.Model, responseBody []byt
 	return len(responseBody) / 4, nil
 }
 
+func (p *OpenAIProvider) ProcessStreamChunk(chunk []byte) (string, error) {
+	chunk = bytes.TrimSpace(chunk)
+	if !bytes.HasPrefix(chunk, []byte("data: ")) || bytes.HasSuffix(chunk, []byte("[DONE]")) {
+		return "", nil
+	}
+	dataBytes := bytes.TrimPrefix(chunk, []byte("data: "))
+	var streamChunk struct {
+		Choices []struct {
+			Delta struct {
+				Content string `json:"content"`
+			} `json:"delta"`
+		} `json:"choices"`
+	}
+	if err := json.Unmarshal(dataBytes, &streamChunk); err != nil {
+		return "", err
+	}
+	if len(streamChunk.Choices) > 0 {
+		return streamChunk.Choices[0].Delta.Content, nil
+	}
+	return "", nil
+}
+
 func (p *OpenAIProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
 	var req struct {
 		Model  string `json:"model"`
