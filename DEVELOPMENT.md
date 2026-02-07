@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide covers how to set up the development environment for **pouch-ai**.
+This guide covers how to set up the development environment for **pouch-ai** and contribute to its codebase.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ This guide covers how to set up the development environment for **pouch-ai**.
 The backend serves the API and the static frontend files (from `frontend/dist`).
 
 ```bash
-# Run the backend (rebuilds on change if using air, otherwise manual restart)
+# Run the backend
 go run cmd/pouch/main.go
 ```
 
@@ -39,9 +39,9 @@ npm run dev
 
 The frontend dev server runs on `http://localhost:4321`.
 
-**Note:** If the frontend code makes relative API calls (e.g., `/v1/...`), they will fail on port 4321 unless you configure a proxy in `astro.config.mjs` or point the API client to `http://localhost:8080`.
+### 3. Integrated Development
 
-For a full integration test, build the frontend and run the backend:
+For a full integration test:
 
 ```bash
 # Build frontend
@@ -51,26 +51,40 @@ cd frontend && npm run build && cd ..
 go run cmd/pouch/main.go
 ```
 
-Then visit `http://localhost:8080`.
+## Logging System
 
-## Building for Production
+Pouch AI uses a structured logging system based on Go's `log/slog`.
 
-To create the single binary:
+### Guidelines
+- Always use the centralized logger from `backend/util/logger`.
+- Avoid using `fmt.Printf` or `log.Printf`.
+- Use contextual data for better observability.
 
-1. **Build Frontend**:
-   ```bash
-   cd frontend
-   npm install
-   npm run build
-   ```
+```go
+import "pouch-ai/backend/util/logger"
 
-2. **Build Backend**:
-   ```bash
-   # From project root
-   go build -o pouch cmd/pouch/main.go
-   ```
+// Standard logging
+logger.L.Info("operation successful", "key_id", id)
 
-The resulting `pouch` binary contains everything needed to run.
+// Error logging
+logger.L.Error("failed to process request", "error", err, "plugin", pluginID)
+```
+
+## Adding New Plugins
+
+Pouch AI's plugin system is decentralized, making it easy to add new LLM providers or middlewares.
+
+### Adding a Provider
+1. Create a new package in `backend/plugins/providers/` (e.g., `anthropic`).
+2. Implement the `domain.Provider` and `domain.ProviderBuilder` interfaces.
+3. Add an `init()` function with a call to `Register()` to decentralized registration.
+4. Export the builder via a `registry.go` in your package.
+
+### Adding a Middleware
+1. Create a new package in `backend/plugins/middlewares/`.
+2. Implement the `domain.Middleware` interface.
+3. Define the middleware metadata (ID and schema).
+4. Register the middleware in the decentralized registry.
 
 ## Testing
 
@@ -82,12 +96,15 @@ Run all Go tests:
 go test ./...
 ```
 
-To run with race detection:
+Run tests for a specific package:
 
 ```bash
-go test -race ./...
+go test ./backend/service/...
 ```
 
-### Frontend Tests
+### Frontend Verification
 
-Currently, the frontend does not have a dedicated test suite (e.g., Vitest/Jest). Development relies on manual verification.
+The frontend currently relies on manual verification. When making changes to shared logic or UI, verify:
+1. **API Client**: Ensure `src/api/api.ts` correctly maps backend responses.
+2. **Form Consistency**: Verify that `KeyForm.tsx` handles both creation and editing correctly.
+3. **Build Status**: Always run `npm run build` in the `frontend` directory to catch syntax or type errors.

@@ -14,7 +14,7 @@ The heart of the application, containing business logic and interfaces.
 ### 2.2 Service Layer (`backend/service`)
 Orchestrates domain entities to perform application-specific tasks.
 - **KeyService**: Handles creation, validation, caching, and usage tracking of API keys.
-- **ProxyService**: Orchestrates the proxy flow through a middleware chain.
+- **ProxyService**: Decomposed into logical units (`validateKey`, `manageBudget`, `buildChain`) for better maintainability and observability.
 
 ### 2.3 Infrastructure Layer (`backend/infra`)
 Concrete implementations of domain interfaces and external system interactions.
@@ -23,12 +23,18 @@ Concrete implementations of domain interfaces and external system interactions.
 - **execution**: The final handler in the proxy chain that performs the actual HTTP requests.
 - **pricing**: Token counting and pricing logic.
 
-### 2.4 API Layer (`backend/api`)
-Handles HTTP communication and presentation.
-- **handler**: Echo handlers for keys and proxying.
-- **middleware**: Authentication and routing logic.
+### 2.4 API & Cross-Cutting Concerns
+- **API Handler**: Echo handlers for keys and proxying (`backend/api`).
+- **Middleware**: Authentication, routing, and plugin-based logic.
+- **Logging**: Centralized structured logging using Go's `log/slog` (`backend/util/logger`).
 
-## 3. Data Flow & Middleware Chain
+## 3. Plugin System
+The system is designed for high extensibility through a decentralized plugin registration mechanism.
+
+- **Decentralized Registration**: Each plugin (provider or middleware) registers itself via a `registry.go` file within its own package. This eliminates the need for hardcoded lists in the core engine.
+- **Schema-Driven**: Plugins can define their configuration schemas, which are used by the frontend to dynamically generate configuration UIs.
+
+## 4. Data Flow & Middleware Chain
 
 The request processing pipeline uses a Chain of Responsibility pattern. When a request hits `/v1/chat/completions`:
 
@@ -43,6 +49,7 @@ sequenceDiagram
 
     Client->>API: POST /v1/chat/completions
     API->>Svc: Execute(Request)
+    Note over Svc: validateKey -> manageBudget -> buildChain
     Svc->>MW: RateLimit Middleware
     MW->>MW: BudgetReset Middleware
     MW->>MW: KeyValidation Middleware
@@ -57,21 +64,14 @@ sequenceDiagram
     Exec->>Svc: Async: Update Usage (Final Cost)
 ```
 
-## 4. Key Components
+## 5. Frontend Architecture
+The frontend is built with Astro and Preact, following a modular and centralized approach.
 
-### 4.1 Budget Enforcement
-Financial safety is the core feature.
-1. **Reservation**: `UsageTrackingMiddleware` estimates the input cost and reserves it against the key's budget before execution.
-2. **Execution**: The request is sent to the provider.
-3. **Settlement**: After the response is complete (or stream finishes), the actual cost (input + output) is calculated. The reservation is adjusted to the final cost in the database.
+- **Centralized API Client**: All backend communication is localized in `frontend/src/api/api.ts`, ensuring consistent error handling and type safety.
+- **Shared UI Components**: Complex forms (like API key configuration) are extracted into shared components (`KeyForm.tsx`) to ensure a consistent UX across creation and editing flows.
+- **Stateful Hooks**: Custom hooks (e.g., `usePluginInfo`) are used to manage shared stateful logic, such as fetching provider and middleware metadata.
 
-### 4.2 Mock Provider
-For testing and development without spending money, `infra.NewMockProvider` creates a local in-memory server.
-- It intercepts requests designated for the "mock" provider.
-- It simulates both streaming and non-streaming OpenAI-compatible responses.
-- It has zero cost, allowing safe UI and integration testing.
-
-## 5. Directory Structure
+## 6. Directory Structure
 
 ```text
 pouch-ai/
@@ -79,16 +79,22 @@ pouch-ai/
 ├── backend/
 │   ├── api/                  # API Layer (Handlers)
 │   ├── database/             # DB Connection Setup
-│   ├── domain/               # Domain Layer (Interfaces, Entities)
+│   ├── domain/               # Domain Layer (Interfaces, Entities, Errors)
 │   ├── infra/                # Infrastructure Layer (Impl: DB, Providers)
+│   ├── plugins/              # Plugin Manager and Registries
 │   ├── server/               # Server Bootstrap & Wiring
-│   └── service/              # Service Layer (Business Logic)
-├── frontend/                 # Astro Frontend
+│   ├── service/              # Service Layer (Orchestration)
+│   └── util/logger/          # Structured Logging System
+├── frontend/
+│   ├── src/api/              # Centralized API Client
+│   ├── src/components/       # Modular UI Components
+│   ├── src/hooks/            # Custom React Hooks
+│   └── src/types.ts/         # Shared Type Definitions
 └── data/                     # SQLite Database storage (runtime)
 ```
 
-## 6. Technology Stack
-- **Backend**: Go (Echo Framework)
+## 7. Technology Stack
+- **Backend**: Go 1.25+ (Echo Framework, slog)
 - **Frontend**: Astro + TailwindCSS + DaisyUI + Preact
 - **Database**: SQLite (modernc.org/sqlite - CGO free)
 - **Token Counting**: tiktoken-go

@@ -6,10 +6,12 @@ Its primary goal is **Financial Safety** when using pay-per-token APIs (like Ope
 ## Features
 
 - **Financial Safety**: Enforces a strict budget by reserving estimated costs before requests and refunding unused amounts after completion.
-- **Single Binary**: The Go backend embeds the compiled Astro frontend and manages the SQLite database, resulting in a single executable key for easy distribution.
+- **Robust Infrastructure**: Built with a clean Domain-Driven Design (DDD) architecture, featuring decomposed service layers and a modular plugin system.
+- **Structured Observability**: Centralized structured logging (`log/slog`) for detailed request tracing and system monitoring.
+- **Single Binary**: The Go backend embeds the compiled Astro frontend and manages the SQLite database, resulting in a single executable for easy distribution.
 - **CGO-Free**: Uses `modernc.org/sqlite` to ensure the binary is static and cross-compatible (e.g., Linux amd64/arm64) without libc dependencies.
 - **OpenAI Compatible**: Works with existing OpenAI clients by changing the base URL.
-- **Provider Support**: Currently supports **OpenAI** and a **Mock** provider for testing/development.
+- **Extensible Plugin System**: Easily add new LLM providers or custom middlewares via a decentralized registration mechanism.
 - **Secure**: API keys are stored encrypted (AES-256-GCM).
 
 ## Getting Started
