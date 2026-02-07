@@ -1,4 +1,4 @@
-import type { MiddlewareInfo, PluginConfig, ProviderInfo } from "../../types";
+import type { MiddlewareInfo, PluginConfig, ProviderInfo } from "../../../../types";
 import MiddlewareComposition from "./MiddlewareComposition";
 import ProviderConfigSection from "./ProviderConfigSection";
 

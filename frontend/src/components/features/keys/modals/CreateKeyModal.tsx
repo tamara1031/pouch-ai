@@ -1,35 +1,32 @@
-import { useState, useEffect } from "preact/hooks";
-import type { MiddlewareInfo, ProviderInfo } from "../../types";
-import { api } from "../../api/api";
-import KeyForm from "./KeyForm";
-
-interface Props {
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccess: (rawKey: string) => void;
-    middlewareInfos: MiddlewareInfo[];
-    providerInfos: ProviderInfo[];
-}
+import { useEffect } from "preact/hooks";
+import { useSignal } from "@preact/signals";
+import { modalStore, pluginStore } from "../../../../lib/store";
+import { apiClient } from "../../../../lib/api-client";
+import KeyForm from "../form/KeyForm";
+import type { PluginConfig } from "../../../../types";
 
 const INITIAL_FORM_DATA = {
     name: "",
     providerId: "openai",
-    providerConfig: {},
+    providerConfig: {} as Record<string, any>,
     autoRenew: false,
-    middlewares: [],
-    expiresAt: null,
+    middlewares: [] as PluginConfig[],
+    expiresAt: null as number | null,
     budgetLimit: "5.00",
     resetPeriod: "2592000",
 };
 
-export default function CreateKeyModal({ isOpen, onClose, onSuccess, middlewareInfos, providerInfos }: Props) {
-    const [formData, setFormData] = useState(INITIAL_FORM_DATA);
-    const [expirationDays, setExpirationDays] = useState("0");
-    const [loading, setLoading] = useState(false);
+export default function CreateKeyModal() {
+    const formData = useSignal(INITIAL_FORM_DATA);
+    const expirationDays = useSignal("0");
+    const loading = useSignal(false);
 
-    // Initial default middlewares
+    const isOpen = modalStore.isCreateOpen.value;
+    const middlewareInfos = pluginStore.middlewares.value;
+    const providerInfos = pluginStore.providers.value;
+
     useEffect(() => {
-        if (middlewareInfos.length > 0 && formData.middlewares.length === 0) {
+        if (isOpen && middlewareInfos.length > 0 && formData.value.middlewares.length === 0) {
             const initial = middlewareInfos
                 .filter(mw => mw.is_default)
                 .map(mw => ({
@@ -39,33 +36,39 @@ export default function CreateKeyModal({ isOpen, onClose, onSuccess, middlewareI
                         return acc;
                     }, {} as Record<string, any>)
                 }));
-            setFormData(prev => ({ ...prev, middlewares: initial }));
+            formData.value = { ...formData.value, middlewares: initial };
         }
-    }, [middlewareInfos]);
+    }, [isOpen, middlewareInfos]);
+
+    const onClose = () => modalStore.closeCreate();
 
     const handleCreate = async (e: Event) => {
         e.preventDefault();
-        setLoading(true);
+        loading.value = true;
 
         let expires_at: number | null = null;
-        const days = parseInt(expirationDays);
+        const days = parseInt(expirationDays.value);
         if (days > 0) {
             expires_at = Math.floor(Date.now() / 1000) + days * 86400;
         }
 
         try {
-            const data = await api.keys.create({
-                name: formData.name,
-                auto_renew: formData.autoRenew,
+            const data = await apiClient.keys.create({
+                name: formData.value.name,
+                auto_renew: formData.value.autoRenew,
                 expires_at,
-                provider: { id: formData.providerId, config: formData.providerConfig },
-                middlewares: formData.middlewares,
-                budget_limit: parseFloat(formData.budgetLimit) || 0,
-                reset_period: parseInt(formData.resetPeriod) || 0,
+                provider: { id: formData.value.providerId, config: formData.value.providerConfig },
+                middlewares: formData.value.middlewares,
+                budget_limit: parseFloat(formData.value.budgetLimit) || 0,
+                reset_period: parseInt(formData.value.resetPeriod) || 0,
             });
 
-            onSuccess(data.key);
-            setFormData({
+            onClose();
+            modalStore.openNewKey(data.key);
+            window.dispatchEvent(new CustomEvent('refresh-keys'));
+
+            // Reset form
+            formData.value = {
                 ...INITIAL_FORM_DATA,
                 middlewares: middlewareInfos
                     .filter(mw => mw.is_default)
@@ -76,17 +79,25 @@ export default function CreateKeyModal({ isOpen, onClose, onSuccess, middlewareI
                             return acc;
                         }, {} as Record<string, any>)
                     }))
-            });
-            setExpirationDays("0");
+            };
+            expirationDays.value = "0";
         } catch (err: any) {
             console.error("Create error:", err);
             alert(err.message || "Failed to create key");
         } finally {
-            setLoading(false);
+            loading.value = false;
         }
     };
 
     if (!isOpen) return null;
+
+    const setFormData = (update: any) => {
+        if (typeof update === 'function') {
+            formData.value = update(formData.value);
+        } else {
+            formData.value = update;
+        }
+    };
 
     return (
         <div class="modal modal-open modal-bottom sm:modal-middle backdrop-blur-sm transition-all duration-300">
@@ -101,18 +112,18 @@ export default function CreateKeyModal({ isOpen, onClose, onSuccess, middlewareI
 
                 <form class="flex-1 overflow-y-auto p-6 space-y-6" onSubmit={handleCreate}>
                     <KeyForm
-                        formData={formData}
+                        formData={formData.value}
                         setFormData={setFormData}
                         middlewareInfos={middlewareInfos}
                         providerInfos={providerInfos}
-                        expirationDays={expirationDays}
-                        setExpirationDays={setExpirationDays}
+                        expirationDays={expirationDays.value}
+                        setExpirationDays={(val) => expirationDays.value = val}
                     />
 
                     <div class="flex justify-end gap-3 pt-4 border-t border-white/10">
                         <button type="button" onClick={onClose} class="btn btn-ghost rounded-lg text-white/50 hover:text-white">Cancel</button>
-                        <button type="submit" class="btn btn-primary px-8 rounded-lg font-bold" disabled={loading}>
-                            {loading ? <span class="loading loading-spinner loading-xs"></span> : "Create Key"}
+                        <button type="submit" class="btn btn-primary px-8 rounded-lg font-bold" disabled={loading.value}>
+                            {loading.value ? <span class="loading loading-spinner loading-xs"></span> : "Create Key"}
                         </button>
                     </div>
                 </form>

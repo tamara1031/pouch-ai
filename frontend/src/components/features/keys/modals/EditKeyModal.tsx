@@ -1,36 +1,35 @@
-import { useState, useEffect } from "preact/hooks";
-import type { Key, MiddlewareInfo, ProviderInfo } from "../../types";
-import { api } from "../../api/api";
-import KeyForm from "./KeyForm";
-
-interface Props {
-    isOpen: boolean;
-    onClose: () => void;
-    editKey: Key | null;
-    middlewareInfos: MiddlewareInfo[];
-    providerInfos: ProviderInfo[];
-}
+import { useEffect } from "preact/hooks";
+import { useSignal } from "@preact/signals";
+import { modalStore, pluginStore } from "../../../../lib/store";
+import { apiClient } from "../../../../lib/api-client";
+import KeyForm from "../form/KeyForm";
+import type { PluginConfig } from "../../../../types";
 
 const INITIAL_FORM_DATA = {
     name: "",
     providerId: "openai",
-    providerConfig: {},
+    providerConfig: {} as Record<string, any>,
     autoRenew: false,
-    middlewares: [],
-    expiresAt: null,
+    middlewares: [] as PluginConfig[],
+    expiresAt: null as number | null,
     budgetLimit: "0",
     resetPeriod: "0",
 };
 
-export default function EditKeyModal({ isOpen, onClose, editKey, middlewareInfos, providerInfos }: Props) {
-    const [id, setId] = useState<number>(0);
-    const [formData, setFormData] = useState(INITIAL_FORM_DATA);
-    const [loading, setLoading] = useState(false);
+export default function EditKeyModal() {
+    const id = useSignal(0);
+    const formData = useSignal(INITIAL_FORM_DATA);
+    const loading = useSignal(false);
+
+    const isOpen = modalStore.isEditOpen.value;
+    const editKey = modalStore.editKeyData.value;
+    const middlewareInfos = pluginStore.middlewares.value;
+    const providerInfos = pluginStore.providers.value;
 
     useEffect(() => {
         if (editKey) {
-            setId(editKey.id);
-            setFormData({
+            id.value = editKey.id;
+            formData.value = {
                 name: editKey.name,
                 providerId: editKey.configuration?.provider.id || "openai",
                 providerConfig: editKey.configuration?.provider.config || {},
@@ -39,22 +38,24 @@ export default function EditKeyModal({ isOpen, onClose, editKey, middlewareInfos
                 expiresAt: editKey.expires_at,
                 budgetLimit: (editKey.configuration?.budget_limit || 0).toString(),
                 resetPeriod: (editKey.configuration?.reset_period || 0).toString(),
-            });
+            };
         }
     }, [editKey]);
 
+    const onClose = () => modalStore.closeEdit();
+
     const handleSave = async (e: Event) => {
         e.preventDefault();
-        setLoading(true);
+        loading.value = true;
         try {
-            await api.keys.update(id, {
-                name: formData.name,
-                auto_renew: formData.autoRenew,
-                expires_at: formData.expiresAt,
-                provider: { id: formData.providerId, config: formData.providerConfig },
-                middlewares: formData.middlewares,
-                budget_limit: parseFloat(formData.budgetLimit) || 0,
-                reset_period: parseInt(formData.resetPeriod) || 0,
+            await apiClient.keys.update(id.value, {
+                name: formData.value.name,
+                auto_renew: formData.value.autoRenew,
+                expires_at: formData.value.expiresAt,
+                provider: { id: formData.value.providerId, config: formData.value.providerConfig },
+                middlewares: formData.value.middlewares,
+                budget_limit: parseFloat(formData.value.budgetLimit) || 0,
+                reset_period: parseInt(formData.value.resetPeriod) || 0,
             });
             window.dispatchEvent(new CustomEvent('refresh-keys'));
             onClose();
@@ -62,7 +63,15 @@ export default function EditKeyModal({ isOpen, onClose, editKey, middlewareInfos
             console.error("Update error:", err);
             alert(err.message || "Failed to update key");
         } finally {
-            setLoading(false);
+            loading.value = false;
+        }
+    };
+
+    const setFormData = (update: any) => {
+        if (typeof update === 'function') {
+            formData.value = update(formData.value);
+        } else {
+            formData.value = update;
         }
     };
 
@@ -82,7 +91,7 @@ export default function EditKeyModal({ isOpen, onClose, editKey, middlewareInfos
                 {editKey && (
                     <form class="flex-1 overflow-y-auto p-6 space-y-6" onSubmit={handleSave}>
                         <KeyForm
-                            formData={formData}
+                            formData={formData.value}
                             setFormData={setFormData}
                             middlewareInfos={middlewareInfos}
                             providerInfos={providerInfos}
@@ -91,8 +100,8 @@ export default function EditKeyModal({ isOpen, onClose, editKey, middlewareInfos
 
                         <div class="flex justify-end gap-3 pt-4 border-t border-white/10">
                             <button type="button" onClick={onClose} class="btn btn-ghost rounded-lg text-white/50 hover:text-white">Cancel</button>
-                            <button type="submit" class="btn btn-primary px-8 rounded-lg font-bold" disabled={loading}>
-                                {loading ? <span class="loading loading-spinner loading-xs"></span> : "Save Changes"}
+                            <button type="submit" class="btn btn-primary px-8 rounded-lg font-bold" disabled={loading.value}>
+                                {loading.value ? <span class="loading loading-spinner loading-xs"></span> : "Save Changes"}
                             </button>
                         </div>
                     </form>
