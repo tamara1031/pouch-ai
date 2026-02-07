@@ -56,8 +56,9 @@ type DefaultMiddlewareRegistry struct {
 }
 
 type regEntry struct {
-	factory func(config map[string]any) Middleware
-	schema  PluginSchema
+	factory   func(config map[string]any) Middleware
+	schema    PluginSchema
+	isDefault bool
 }
 
 func NewMiddlewareRegistry() MiddlewareRegistry {
@@ -65,7 +66,7 @@ func NewMiddlewareRegistry() MiddlewareRegistry {
 }
 
 func (r *DefaultMiddlewareRegistry) Register(info MiddlewareInfo, factory func(config map[string]any) Middleware) {
-	r.plugins[info.ID] = regEntry{factory: factory, schema: info.Schema}
+	r.plugins[info.ID] = regEntry{factory: factory, schema: info.Schema, isDefault: info.IsDefault}
 }
 
 func (r *DefaultMiddlewareRegistry) Get(id string, config map[string]any) (Middleware, error) {
@@ -80,8 +81,9 @@ func (r *DefaultMiddlewareRegistry) List() []MiddlewareInfo {
 	var infos []MiddlewareInfo
 	for id, entry := range r.plugins {
 		infos = append(infos, MiddlewareInfo{
-			ID:     id,
-			Schema: entry.schema,
+			ID:        id,
+			Schema:    entry.schema,
+			IsDefault: entry.isDefault,
 		})
 	}
 	return infos

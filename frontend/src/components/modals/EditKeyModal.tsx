@@ -1,11 +1,12 @@
 import { useState, useEffect } from "preact/hooks";
-import type { Key, MiddlewareInfo, PluginConfig } from "../../types";
+import type { Key, MiddlewareInfo, PluginConfig, ProviderInfo } from "../../types";
 import MiddlewareComposition from "./MiddlewareComposition";
 
 interface Props {
     modalRef: any;
     editKey: Key | null;
     middlewareInfos: MiddlewareInfo[];
+    providerInfos: ProviderInfo[];
 }
 
 export default function EditKeyModal({ editKey, middlewareInfos }: Props) {

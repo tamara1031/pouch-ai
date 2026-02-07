@@ -91,19 +91,17 @@ func (m *MockRepository) ResetUsage(ctx context.Context, id domain.ID, lastReset
 // MockRegistry
 type MockRegistry struct{}
 
-func (m *MockRegistry) Register(p domain.Provider) {}
-func (m *MockRegistry) Get(name string) (domain.Provider, error) {
-	return &DummyProvider{}, nil
-}
-func (m *MockRegistry) List() []domain.Provider { return nil }
+func (m *MockRegistry) Register(p domain.Provider)               {}
+func (m *MockRegistry) Get(name string) (domain.Provider, error) { return &DummyProvider{}, nil }
+func (m *MockRegistry) List() []domain.Provider                  { return nil }
+func (m *MockRegistry) ListInfo() []domain.ProviderInfo          { return nil }
 
 // DummyProvider
 type DummyProvider struct{}
 
-func (d *DummyProvider) Name() string { return "dummy" }
-func (d *DummyProvider) Configure(config map[string]string) (domain.Provider, error) {
-	return d, nil
-}
+func (d *DummyProvider) Name() string                                             { return "dummy" }
+func (d *DummyProvider) Schema() domain.PluginSchema                              { return nil }
+func (d *DummyProvider) Configure(config map[string]any) (domain.Provider, error) { return d, nil }
 func (d *DummyProvider) GetPricing(model domain.Model) (domain.Pricing, error) {
 	return domain.Pricing{}, nil
 }

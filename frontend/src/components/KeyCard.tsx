@@ -1,13 +1,14 @@
-import type { Key } from "../types";
+import type { Key, MiddlewareInfo } from "../types";
 import { getKeyStatus, StatusBadge, CopyButton, UsageBar } from "./KeyCardParts";
 
 interface Props {
     keyData: Key;
+    middlewareInfos: MiddlewareInfo[];
     onEdit: (key: Key) => void;
     onRevoke: (id: number) => void;
 }
 
-export default function KeyCard({ keyData, onEdit, onRevoke }: Props) {
+export default function KeyCard({ keyData, middlewareInfos, onEdit, onRevoke }: Props) {
     const {
         id,
         name,
@@ -24,7 +25,7 @@ export default function KeyCard({ keyData, onEdit, onRevoke }: Props) {
     let rate_period: any = "none";
 
     for (const emw of configuration?.middlewares || []) {
-        const info = (window as any).middlewareInfos?.find((info: any) => info.id === emw.id);
+        const info = middlewareInfos.find((info) => info.id === emw.id);
         if (!info) continue;
 
         const limitKey = Object.keys(info.schema).find(k => info.schema[k].role === "limit");

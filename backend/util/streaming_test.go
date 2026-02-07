@@ -13,8 +13,9 @@ import (
 // TestMockProvider implements domain.Provider for testing
 type TestMockProvider struct{}
 
-func (m *TestMockProvider) Name() string { return "mock" }
-func (m *TestMockProvider) Configure(config map[string]string) (domain.Provider, error) {
+func (m *TestMockProvider) Name() string                { return "mock" }
+func (m *TestMockProvider) Schema() domain.PluginSchema { return nil }
+func (m *TestMockProvider) Configure(config map[string]any) (domain.Provider, error) {
 	return m, nil
 }
 func (m *TestMockProvider) GetPricing(model domain.Model) (domain.Pricing, error) {

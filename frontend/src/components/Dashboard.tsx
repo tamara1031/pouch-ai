@@ -35,8 +35,7 @@ export default function Dashboard() {
         try {
             const res = await fetch("/v1/config/middlewares", { cache: "no-store" });
             const data = await res.json();
-            setMiddlewareInfo(data || []);
-            (window as any).middlewareInfos = data || []; // Expose globally for KeyCardParts to use roles
+            setMiddlewareInfo(data?.middlewares || []);
         } catch (err) {
             console.error("Failed to load middleware info:", err);
         }
@@ -147,6 +146,7 @@ export default function Dashboard() {
                     <KeyCard
                         key={key.id}
                         keyData={key}
+                        middlewareInfos={middlewareInfo}
                         onEdit={handleEdit}
                         onRevoke={handleRevoke}
                     />

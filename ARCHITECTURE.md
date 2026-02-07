@@ -5,25 +5,25 @@
 
 ## 2. Layered Architecture
 
-### 2.1 Domain Layer (`internal/domain`)
+### 2.1 Domain Layer (`backend/domain`)
 The heart of the application, containing business logic and interfaces.
 - **Key Domain**: Manages API keys, budgets, and rate limits.
 - **Provider Domain**: Defines the abstraction for LLM backends (e.g., OpenAI, Mock).
 - **Proxy Domain**: Defines the request/response flow using the **Chain of Responsibility** pattern.
 
-### 2.2 Service Layer (`internal/service`)
+### 2.2 Service Layer (`backend/service`)
 Orchestrates domain entities to perform application-specific tasks.
 - **KeyService**: Handles creation, validation, caching, and usage tracking of API keys.
 - **ProxyService**: Orchestrates the proxy flow through a middleware chain.
 
-### 2.3 Infrastructure Layer (`internal/infra`)
+### 2.3 Infrastructure Layer (`backend/infra`)
 Concrete implementations of domain interfaces and external system interactions.
 - **db**: SQLite implementation of the Key Repository.
 - **provider**: implementations of LLM providers (OpenAI, Mock).
 - **execution**: The final handler in the proxy chain that performs the actual HTTP requests.
 - **pricing**: Token counting and pricing logic.
 
-### 2.4 API Layer (`internal/api`)
+### 2.4 API Layer (`backend/api`)
 Handles HTTP communication and presentation.
 - **handler**: Echo handlers for keys and proxying.
 - **middleware**: Authentication and routing logic.
@@ -76,7 +76,7 @@ For testing and development without spending money, `infra.NewMockProvider` crea
 ```text
 pouch-ai/
 ├── cmd/pouch/                # Entry point (main.go)
-├── internal/
+├── backend/
 │   ├── api/                  # API Layer (Handlers)
 │   ├── database/             # DB Connection Setup
 │   ├── domain/               # Domain Layer (Interfaces, Entities)

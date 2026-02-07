@@ -11,7 +11,7 @@ This guide covers how to set up the development environment for **pouch-ai**.
 ## Project Structure
 
 - `cmd/pouch/`: Entry point for the Go backend.
-- `internal/`: Private application code (DDD structure).
+- `backend/`: Private application code (DDD structure).
 - `frontend/`: Astro frontend application.
 
 ## Running Locally

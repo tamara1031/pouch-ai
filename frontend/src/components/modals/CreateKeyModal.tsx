@@ -1,11 +1,12 @@
 import { useState, useEffect } from "preact/hooks";
-import type { MiddlewareInfo, PluginConfig } from "../../types";
+import type { MiddlewareInfo, PluginConfig, ProviderInfo } from "../../types";
 import MiddlewareComposition from "./MiddlewareComposition";
 
 interface Props {
     modalRef: any;
     onSuccess: (rawKey: string) => void;
     middlewareInfos: MiddlewareInfo[];
+    providerInfos: ProviderInfo[];
 }
 
 export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos }: Props) {

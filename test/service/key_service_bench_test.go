@@ -14,11 +14,11 @@ type MockProvider struct {
 	delay time.Duration
 }
 
-func (m *MockProvider) Name() string {
-	return m.name
-}
+func (m *MockProvider) Name() string { return m.name }
 
-func (m *MockProvider) Configure(config map[string]string) (domain.Provider, error) {
+func (m *MockProvider) Schema() domain.PluginSchema { return nil }
+
+func (m *MockProvider) Configure(config map[string]any) (domain.Provider, error) {
 	return m, nil
 }
 
@@ -72,9 +72,8 @@ func (r *BenchRegistry) Get(name string) (domain.Provider, error) {
 	return nil, nil
 }
 
-func (r *BenchRegistry) List() []domain.Provider {
-	return r.providers
-}
+func (r *BenchRegistry) List() []domain.Provider         { return r.providers }
+func (r *BenchRegistry) ListInfo() []domain.ProviderInfo { return nil }
 
 func BenchmarkGetProviderUsage(b *testing.B) {
 	registry := &BenchRegistry{}
