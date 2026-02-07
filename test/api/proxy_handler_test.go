@@ -9,9 +9,9 @@ import (
 
 	"pouch-ai/backend/api"
 	"pouch-ai/backend/domain"
-	"pouch-ai/backend/infra"
-	"pouch-ai/backend/service"
+	"pouch-ai/backend/infra/engine"
 	"pouch-ai/backend/plugins/providers"
+	"pouch-ai/backend/service"
 
 	"github.com/labstack/echo/v4"
 )
@@ -35,13 +35,15 @@ func TestProxy_PassThrough(t *testing.T) {
 	tokenCounter := providers.NewTiktokenCounter()
 
 	// Registry
-	registry := domain.NewRegistry()
+	registry := domain.NewProviderRegistry()
 	provider := providers.NewOpenAIProvider("test-key", mockUpstream.URL, pricing, tokenCounter)
 	registry.Register(provider)
 
 	// Service
-	executionHandler := infra.NewExecutionHandler(nil)
-	proxyService := service.NewProxyService(executionHandler, domain.NewMiddlewareRegistry()) // No middlewares for simplicity
+	executionHandler := engine.NewExecutionHandler(nil)
+	mwRegistry := domain.NewMiddlewareRegistry()
+	keyService := service.NewKeyService(&MockRepository{}, registry, mwRegistry)
+	proxyService := service.NewProxyService(executionHandler, mwRegistry, keyService)
 
 	// Handler
 	handler := api.NewProxyHandler(proxyService, registry)

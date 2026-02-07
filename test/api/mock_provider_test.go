@@ -9,27 +9,30 @@ import (
 
 	"pouch-ai/backend/api"
 	"pouch-ai/backend/domain"
-	"pouch-ai/backend/infra"
-	"pouch-ai/backend/service"
+	"pouch-ai/backend/infra/engine"
 	"pouch-ai/backend/plugins/providers"
+	"pouch-ai/backend/service"
 
 	"github.com/labstack/echo/v4"
 )
 
 func TestMockProvider_Integration(t *testing.T) {
 	// 1. Setup Dependencies
-	registry := domain.NewRegistry()
+	registry := domain.NewProviderRegistry()
+	mwRegistry := domain.NewMiddlewareRegistry()
+	keyService := service.NewKeyService(nil, registry, mwRegistry)
 
 	// Register Mock Provider
 	mockProv := providers.NewMockProvider()
 	registry.Register(mockProv)
 
 	// Service
-	executionHandler := infra.NewExecutionHandler(nil)
+	executionHandler := engine.NewExecutionHandler(nil)
 
 	proxyService := service.NewProxyService(
 		executionHandler,
-		domain.NewMiddlewareRegistry(),
+		mwRegistry,
+		keyService,
 	)
 
 	// Handler
@@ -89,12 +92,14 @@ func TestMockProvider_Integration(t *testing.T) {
 
 func TestMockProvider_Streaming_Integration(t *testing.T) {
 	// 1. Setup Dependencies
-	registry := domain.NewRegistry()
+	registry := domain.NewProviderRegistry()
+	mwRegistry := domain.NewMiddlewareRegistry()
+	keyService := service.NewKeyService(&MockRepository{}, registry, mwRegistry)
 	mockProv := providers.NewMockProvider()
 	registry.Register(mockProv)
 
-	executionHandler := infra.NewExecutionHandler(nil)
-	proxyService := service.NewProxyService(executionHandler, domain.NewMiddlewareRegistry())
+	executionHandler := engine.NewExecutionHandler(&MockRepository{})
+	proxyService := service.NewProxyService(executionHandler, mwRegistry, keyService)
 	handler := api.NewProxyHandler(proxyService, registry)
 
 	// 2. Setup Echo

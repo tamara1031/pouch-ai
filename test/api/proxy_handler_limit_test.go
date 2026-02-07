@@ -8,7 +8,7 @@ import (
 
 	"pouch-ai/backend/api"
 	"pouch-ai/backend/domain"
-	"pouch-ai/backend/infra"
+	"pouch-ai/backend/infra/engine"
 	"pouch-ai/backend/service"
 
 	"github.com/labstack/echo/v4"
@@ -16,11 +16,13 @@ import (
 
 func TestProxy_LargeBody(t *testing.T) {
 	// 1. Setup Mock Dependencies
-	registry := domain.NewRegistry()
+	registry := domain.NewProviderRegistry()
+	mwRegistry := domain.NewMiddlewareRegistry()
+	keyService := service.NewKeyService(&MockRepository{}, registry, mwRegistry)
 
 	// 2. Setup Service
-	executionHandler := infra.NewExecutionHandler(nil)
-	proxyService := service.NewProxyService(executionHandler, domain.NewMiddlewareRegistry())
+	executionHandler := engine.NewExecutionHandler(&MockRepository{})
+	proxyService := service.NewProxyService(executionHandler, mwRegistry, keyService)
 	handler := api.NewProxyHandler(proxyService, registry)
 
 	// 3. Setup Echo

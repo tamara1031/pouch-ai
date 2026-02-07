@@ -13,8 +13,8 @@ import (
 	"pouch-ai/backend/config"
 	"pouch-ai/backend/database"
 	"pouch-ai/backend/domain"
-"pouch-ai/backend/infra/engine"
-"pouch-ai/backend/plugins"
+	"pouch-ai/backend/infra/engine"
+	"pouch-ai/backend/plugins"
 	"pouch-ai/backend/plugins/middlewares"
 	"pouch-ai/backend/plugins/providers"
 	"pouch-ai/backend/service"
@@ -64,11 +64,7 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	keyService := service.NewKeyService(keyRepo, registry, mwRegistry)
 
 	executionHandler := engine.NewExecutionHandler(keyRepo)
-	mwRegistry.Register(middlewares.GetKeyValidationInfo(), middlewares.NewKeyValidationMiddleware)
-	mwRegistry.Register(middlewares.GetUsageTrackingInfo(keyService), middlewares.NewUsageTrackingMiddleware(keyService))
 	mwRegistry.Register(middlewares.GetInfo(), middlewares.NewRateLimitMiddleware)
-	mwRegistry.Register(middlewares.GetBudgetEnforcementInfo(), middlewares.NewBudgetEnforcementMiddleware)
-	mwRegistry.Register(middlewares.GetBudgetResetInfo(keyService), middlewares.NewBudgetResetMiddleware(keyService))
 
 	// Load external plugins
 	pluginManager := plugins.NewPluginManager(mwRegistry, "./backend/plugins/middlewares")
@@ -76,7 +72,7 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 		fmt.Printf("WARN: Failed to load external plugins: %v\n", err)
 	}
 
-	proxyService := service.NewProxyService(executionHandler, mwRegistry)
+	proxyService := service.NewProxyService(executionHandler, mwRegistry, keyService)
 
 	// 4. Initialize Handlers
 	keyHandler := api.NewKeyHandler(keyService)

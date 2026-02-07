@@ -66,7 +66,7 @@ func (p *MockProvider) GetUsage(ctx context.Context) (float64, error) { return 0
 func TestKeyHandler_CreateKey_Validation(t *testing.T) {
 	// Setup
 	mockRepo := &MockRepository{}
-	registry := domain.NewRegistry()
+	registry := domain.NewProviderRegistry()
 	registry.Register(&MockProvider{})
 
 	mwReg := domain.NewMiddlewareRegistry()

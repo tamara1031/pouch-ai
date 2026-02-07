@@ -5,6 +5,7 @@ import (
 	"pouch-ai/backend/domain"
 	"pouch-ai/backend/service"
 	"testing"
+	"time"
 )
 
 type mockRepo struct {
@@ -27,11 +28,39 @@ func (m *mockRepo) GetByHash(ctx context.Context, hash string) (*domain.Key, err
 }
 
 type mockRegistry struct {
-	domain.Registry
+	domain.ProviderRegistry
 }
 
 func (m *mockRegistry) Get(name string) (domain.Provider, error) {
-	return nil, nil // Simple mock
+	return nil, nil
+}
+
+func (m *mockRegistry) List() []domain.Provider {
+	return nil
+}
+
+func (m *mockRepo) GetByID(ctx context.Context, id domain.ID) (*domain.Key, error) {
+	return m.keys[id], nil
+}
+
+func (m *mockRepo) List(ctx context.Context) ([]*domain.Key, error) {
+	return nil, nil
+}
+
+func (m *mockRepo) Update(ctx context.Context, k *domain.Key) error {
+	return nil
+}
+
+func (m *mockRepo) Delete(ctx context.Context, id domain.ID) error {
+	return nil
+}
+
+func (m *mockRepo) IncrementUsage(ctx context.Context, id domain.ID, amount float64) error {
+	return nil
+}
+
+func (m *mockRepo) ResetUsage(ctx context.Context, id domain.ID, lastResetAt time.Time) error {
+	return nil
 }
 
 func TestKeyService_CreateKey(t *testing.T) {

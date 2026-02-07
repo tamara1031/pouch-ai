@@ -24,7 +24,7 @@ export default function KeyCard({ keyData, onEdit, onRevoke }: Props) {
     let rate_period: any = "none";
 
     for (const emw of configuration?.middlewares || []) {
-        const info = (window as any).middlewareInfo?.find((info: any) => info.id === emw.id);
+        const info = (window as any).middlewareInfos?.find((info: any) => info.id === emw.id);
         if (!info) continue;
 
         const limitKey = Object.keys(info.schema).find(k => info.schema[k].role === "limit");
@@ -33,7 +33,7 @@ export default function KeyCard({ keyData, onEdit, onRevoke }: Props) {
         if (limitKey && periodKey) {
             rate_limit = parseFloat(emw.config[limitKey] || "0");
             rate_period = emw.config[periodKey];
-            break; // Use the first one found
+            break;
         }
     }
 

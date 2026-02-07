@@ -65,6 +65,8 @@ func (h *KeyHandler) CreateKey(c echo.Context) error {
 		ExpiresAt   *int64                `json:"expires_at"`
 		MockConfig  string                `json:"mock_config"`
 		Middlewares []domain.PluginConfig `json:"middlewares"`
+		BudgetLimit float64               `json:"budget_limit"`
+		ResetPeriod int                   `json:"reset_period"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return BadRequest(c, err.Error())
@@ -76,6 +78,8 @@ func (h *KeyHandler) CreateKey(c echo.Context) error {
 		ExpiresAt:   req.ExpiresAt,
 		MockConfig:  req.MockConfig,
 		Middlewares: req.Middlewares,
+		BudgetLimit: req.BudgetLimit,
+		ResetPeriod: req.ResetPeriod,
 	}
 
 	raw, _, err := h.service.CreateKey(c.Request().Context(), input)
@@ -103,6 +107,8 @@ func (h *KeyHandler) UpdateKey(c echo.Context) error {
 		MockConfig  string                `json:"mock_config"`
 		ExpiresAt   *int64                `json:"expires_at"`
 		Middlewares []domain.PluginConfig `json:"middlewares"`
+		BudgetLimit float64               `json:"budget_limit"`
+		ResetPeriod int                   `json:"reset_period"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return BadRequest(c, err.Error())
@@ -115,6 +121,8 @@ func (h *KeyHandler) UpdateKey(c echo.Context) error {
 		MockConfig:  req.MockConfig,
 		ExpiresAt:   req.ExpiresAt,
 		Middlewares: req.Middlewares,
+		BudgetLimit: req.BudgetLimit,
+		ResetPeriod: req.ResetPeriod,
 	}
 
 	err = h.service.UpdateKey(c.Request().Context(), input)

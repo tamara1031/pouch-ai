@@ -39,6 +39,8 @@ type CreateKeyInput struct {
 	MockConfig  string
 	ExpiresAt   *int64
 	Middlewares []domain.PluginConfig
+	BudgetLimit float64
+	ResetPeriod int
 }
 
 func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (string, *domain.Key, error) {
@@ -67,6 +69,8 @@ func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (strin
 				Config: map[string]any{"mock_response": input.MockConfig},
 			},
 			Middlewares: input.Middlewares,
+			BudgetLimit: input.BudgetLimit,
+			ResetPeriod: input.ResetPeriod,
 		},
 		BudgetUsage: 0,
 		LastResetAt: time.Now(),
@@ -131,6 +135,8 @@ type UpdateKeyInput struct {
 	MockConfig  string
 	ExpiresAt   *int64
 	Middlewares []domain.PluginConfig
+	BudgetLimit float64
+	ResetPeriod int
 }
 
 func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error {
@@ -155,6 +161,8 @@ func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error 
 			Config: map[string]any{"mock_response": input.MockConfig},
 		},
 		Middlewares: input.Middlewares,
+		BudgetLimit: input.BudgetLimit,
+		ResetPeriod: input.ResetPeriod,
 	}
 
 	if input.ExpiresAt != nil {

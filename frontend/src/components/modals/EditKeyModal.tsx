@@ -15,6 +15,8 @@ export default function EditKeyModal({ editKey, middlewareInfos }: Props) {
     const [providerConfig, setProviderConfig] = useState<Record<string, any>>({});
     const [middlewares, setMiddlewares] = useState<PluginConfig[]>([]);
     const [expiresAt, setExpiresAt] = useState<number | null>(null);
+    const [budgetLimit, setBudgetLimit] = useState("0");
+    const [resetPeriod, setResetPeriod] = useState("0");
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -25,6 +27,8 @@ export default function EditKeyModal({ editKey, middlewareInfos }: Props) {
             setProviderConfig(editKey.configuration?.provider.config || {});
             setMiddlewares(editKey.configuration?.middlewares || []);
             setExpiresAt(editKey.expires_at);
+            setBudgetLimit((editKey.configuration?.budget_limit || 0).toString());
+            setResetPeriod((editKey.configuration?.reset_period || 0).toString());
         }
     }, [editKey]);
 
@@ -40,6 +44,8 @@ export default function EditKeyModal({ editKey, middlewareInfos }: Props) {
                     configuration: {
                         provider: { id: providerId, config: providerConfig },
                         middlewares: middlewares,
+                        budget_limit: parseFloat(budgetLimit) || 0,
+                        reset_period: parseInt(resetPeriod) || 0,
                     },
                     expires_at: expiresAt,
                 }),
@@ -102,6 +108,14 @@ export default function EditKeyModal({ editKey, middlewareInfos }: Props) {
                                 <div class="form-control">
                                     <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Expires At</span></label>
                                     <input type="datetime-local" value={formatDateForInput(expiresAt)} onChange={handleExpiryChange} class="input input-bordered w-full bg-white/5 border-white/5 rounded-xl text-xs" />
+                                </div>
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Budget Limit (USD)</span></label>
+                                    <input type="number" step="0.01" value={budgetLimit} onInput={(e) => setBudgetLimit(e.currentTarget.value)} class="input input-bordered w-full bg-white/5 border-white/5 rounded-xl font-bold" />
+                                </div>
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Reset Period (Seconds)</span></label>
+                                    <input type="number" value={resetPeriod} onInput={(e) => setResetPeriod(e.currentTarget.value)} class="input input-bordered w-full bg-white/5 border-white/5 rounded-xl font-bold" />
                                 </div>
                             </div>
 

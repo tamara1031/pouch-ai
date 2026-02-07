@@ -34,6 +34,8 @@ type PluginConfig struct {
 type KeyConfiguration struct {
 	Provider    PluginConfig   `json:"provider"`
 	Middlewares []PluginConfig `json:"middlewares"`
+	BudgetLimit float64        `json:"budget_limit"`
+	ResetPeriod int            `json:"reset_period"`
 }
 
 type Key struct {

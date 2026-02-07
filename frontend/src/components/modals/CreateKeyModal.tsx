@@ -13,6 +13,8 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos }:
     const [providerId, setProviderId] = useState("openai");
     const [middlewares, setMiddlewares] = useState<PluginConfig[]>([]);
     const [expiresAtDays, setExpiresAtDays] = useState("0");
+    const [budgetLimit, setBudgetLimit] = useState("5.00");
+    const [resetPeriod, setResetPeriod] = useState("2592000"); // 30 days default
     const [loading, setLoading] = useState(false);
 
     // Default middlewares based on is_default flag in infos
@@ -50,6 +52,8 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos }:
                     configuration: {
                         provider: { id: providerId, config: {} },
                         middlewares: middlewares,
+                        budget_limit: parseFloat(budgetLimit) || 0,
+                        reset_period: parseInt(resetPeriod) || 0,
                     },
                     expires_at,
                 }),
@@ -114,6 +118,14 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos }:
                                     <option value="30">1 Month</option>
                                     <option value="90">3 Months</option>
                                 </select>
+                            </div>
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Budget Limit (USD)</span></label>
+                                <input type="number" step="0.01" value={budgetLimit} onInput={(e) => setBudgetLimit(e.currentTarget.value)} class="input input-bordered w-full bg-white/5 border-white/5 rounded-xl font-bold" />
+                            </div>
+                            <div class="form-control">
+                                <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Reset Period (Seconds)</span></label>
+                                <input type="number" value={resetPeriod} onInput={(e) => setResetPeriod(e.currentTarget.value)} class="input input-bordered w-full bg-white/5 border-white/5 rounded-xl font-bold" />
                             </div>
                         </div>
 

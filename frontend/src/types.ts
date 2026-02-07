@@ -6,6 +6,8 @@ export interface PluginConfig {
 export interface KeyConfiguration {
     provider: PluginConfig;
     middlewares: PluginConfig[];
+    budget_limit: number;
+    reset_period: number;
 }
 
 export type FieldType = "string" | "number" | "boolean" | "select";
