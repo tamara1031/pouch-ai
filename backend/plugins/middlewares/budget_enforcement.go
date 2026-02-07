@@ -12,6 +12,7 @@ func GetBudgetEnforcementInfo() domain.MiddlewareInfo {
 		Schema: domain.MiddlewareSchema{
 			"limit": {Type: domain.FieldTypeNumber, DisplayName: "Budget Limit", Default: 5.00, Description: "Budget limit in USD", Role: domain.FieldRoleLimit},
 		},
+		IsDefault: true,
 	}
 }
 

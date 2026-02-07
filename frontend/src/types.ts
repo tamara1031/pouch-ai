@@ -26,6 +26,7 @@ export type MiddlewareSchema = Record<string, FieldSchema>;
 export interface MiddlewareInfo {
     id: string;
     schema: MiddlewareSchema;
+    is_default?: boolean;
 }
 
 export interface Key {

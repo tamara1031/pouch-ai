@@ -17,6 +17,7 @@ func GetInfo() domain.MiddlewareInfo {
 			"limit":  {Type: domain.FieldTypeNumber, DisplayName: "Request Limit", Default: 10, Description: "Requests per period", Role: domain.FieldRoleLimit},
 			"period": {Type: domain.FieldTypeNumber, DisplayName: "Period (seconds)", Default: 60, Description: "Time window in seconds", Role: domain.FieldRolePeriod},
 		},
+		IsDefault: true,
 	}
 }
 

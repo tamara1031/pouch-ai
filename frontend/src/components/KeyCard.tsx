@@ -19,10 +19,23 @@ export default function KeyCard({ keyData, onEdit, onRevoke }: Props) {
     const status = getKeyStatus(keyData);
     const { expiresText, usagePercent, isMock, budgetLimit } = status;
 
-    // Extract Rate Limit from rate_limit middleware
-    const rateMw = configuration?.middlewares.find(m => m.id === "rate_limit");
-    const rate_limit = rateMw?.config["limit"] ? parseInt(rateMw.config["limit"]) : 0;
-    const rate_period = rateMw?.config["period"] || "none";
+    // Extract Rate Limit from any middleware with both "limit" and "period" roles
+    let rate_limit = 0;
+    let rate_period: any = "none";
+
+    for (const emw of configuration?.middlewares || []) {
+        const info = (window as any).middlewareInfo?.find((info: any) => info.id === emw.id);
+        if (!info) continue;
+
+        const limitKey = Object.keys(info.schema).find(k => info.schema[k].role === "limit");
+        const periodKey = Object.keys(info.schema).find(k => info.schema[k].role === "period");
+
+        if (limitKey && periodKey) {
+            rate_limit = parseFloat(emw.config[limitKey] || "0");
+            rate_period = emw.config[periodKey];
+            break; // Use the first one found
+        }
+    }
 
     // Rate Limit Text
     let rateLimitText = "Unlimited";

@@ -36,6 +36,7 @@ export default function Dashboard() {
             const res = await fetch("/v1/config/middlewares", { cache: "no-store" });
             const data = await res.json();
             setMiddlewareInfo(data || []);
+            (window as any).middlewareInfo = data || []; // Expose globally for KeyCardParts to use roles
         } catch (err) {
             console.error("Failed to load middleware info:", err);
         }
@@ -66,11 +67,18 @@ export default function Dashboard() {
         window.dispatchEvent(event);
     };
 
-    // Helper to get budget limit from a key
+    // Helper to get budget limit from a key using roles
     const getBudgetLimit = (k: Key) => {
-        const budgetMw = k.configuration?.middlewares.find(m => m.id === "budget");
-        if (!budgetMw) return 0;
-        return parseFloat(budgetMw.config["limit"] || "0");
+        const limitMw = k.configuration?.middlewares.find(m => {
+            const info = middlewareInfo.find(info => info.id === m.id);
+            return info && Object.values(info.schema).some(s => s.role === "limit");
+        });
+        if (!limitMw) return 0;
+        const info = middlewareInfo.find(info => info.id === limitMw.id);
+        if (!info) return 0;
+        const limitKey = Object.keys(info.schema).find(k => info.schema[k].role === "limit");
+        if (!limitKey) return 0;
+        return parseFloat(limitMw.config[limitKey] || "0");
     };
 
     const totalBudget = keys.reduce((acc, k) => acc + getBudgetLimit(k), 0);

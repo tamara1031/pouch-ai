@@ -7,8 +7,9 @@ import (
 
 func GetKeyValidationInfo() domain.MiddlewareInfo {
 	return domain.MiddlewareInfo{
-		ID:     "key_validation",
-		Schema: domain.MiddlewareSchema{},
+		ID:        "key_validation",
+		Schema:    domain.MiddlewareSchema{},
+		IsDefault: true,
 	}
 }
 

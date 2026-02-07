@@ -14,10 +14,18 @@ export function getKeyStatus(key: Key) {
         }
     }
 
-    // Extract budget limit from budget middleware
-    const budgetMw = configuration?.middlewares.find(m => m.id === "budget");
-    const budgetLimitStr = budgetMw?.config["limit"];
-    const budgetLimit = budgetLimitStr ? parseFloat(budgetLimitStr) : 0;
+    // Extract budget limit from any middleware with a "limit" role
+    let budgetLimit = 0;
+    const limitMw = configuration?.middlewares.find(m => {
+        const info = (window as any).middlewareInfo?.find((info: any) => info.id === m.id);
+        return info && Object.values(info.schema).some((s: any) => s.role === "limit");
+    });
+
+    if (limitMw) {
+        const info = (window as any).middlewareInfo?.find((info: any) => info.id === limitMw.id);
+        const limitKey = Object.keys(info.schema).find(k => info.schema[k].role === "limit");
+        if (limitKey) budgetLimit = parseFloat(limitMw.config[limitKey] || "0");
+    }
 
     const isMock = configuration?.provider.id === "mock";
     const usagePercent = budgetLimit > 0 ? Math.min((budget_usage / budgetLimit) * 100, 100) : 0;

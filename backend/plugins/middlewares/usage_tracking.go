@@ -7,8 +7,9 @@ import (
 
 func GetUsageTrackingInfo(keyService *service.KeyService) domain.MiddlewareInfo {
 	return domain.MiddlewareInfo{
-		ID:     "usage_tracking",
-		Schema: domain.MiddlewareSchema{},
+		ID:        "usage_tracking",
+		Schema:    domain.MiddlewareSchema{},
+		IsDefault: true,
 	}
 }
 

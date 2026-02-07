@@ -53,8 +53,9 @@ type FieldSchema struct {
 type MiddlewareSchema map[string]FieldSchema
 
 type MiddlewareInfo struct {
-	ID     string           `json:"id"`
-	Schema MiddlewareSchema `json:"schema"`
+	ID        string           `json:"id"`
+	Schema    MiddlewareSchema `json:"schema"`
+	IsDefault bool             `json:"is_default,omitempty"`
 }
 
 type Handler interface {

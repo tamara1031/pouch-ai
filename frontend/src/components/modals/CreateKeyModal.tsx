@@ -14,13 +14,11 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos }:
     const [expiresAtDays, setExpiresAtDays] = useState("0");
     const [loading, setLoading] = useState(false);
 
-    // Default middlewares based on infos
+    // Default middlewares based on is_default flag in infos
     useEffect(() => {
         if (middlewareInfos.length > 0 && middlewares.length === 0) {
-            // Pick some sensible defaults: budget, rate_limit, key_validation, usage_tracking
-            const defaults = ["key_validation", "usage_tracking", "budget", "rate_limit"];
             const initial = middlewareInfos
-                .filter(mw => defaults.includes(mw.id))
+                .filter(mw => mw.is_default)
                 .map(mw => ({
                     id: mw.id,
                     config: Object.keys(mw.schema).reduce((acc, key) => {
@@ -62,9 +60,8 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos }:
                 setName("");
                 setExpiresAtDays("0");
                 // Reset middlewares to defaults
-                const defaults = ["key_validation", "usage_tracking", "budget", "rate_limit"];
                 setMiddlewares(middlewareInfos
-                    .filter(mw => defaults.includes(mw.id))
+                    .filter(mw => mw.is_default)
                     .map(mw => ({
                         id: mw.id,
                         config: Object.keys(mw.schema).reduce((acc, key) => {
