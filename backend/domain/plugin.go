@@ -42,11 +42,18 @@ type PluginInfo struct {
 	IsDefault bool         `json:"is_default,omitempty"`
 }
 
-type MiddlewareRegistry registry.Registry[func(config map[string]any) Middleware]
+type MiddlewareFactory func(config map[string]any) Middleware
+
+type MiddlewareEntry struct {
+	Info    PluginInfo
+	Factory MiddlewareFactory
+}
+
+type MiddlewareRegistry registry.Registry[MiddlewareEntry]
 type ProviderRegistry registry.Registry[Provider]
 
 func NewMiddlewareRegistry() MiddlewareRegistry {
-	return registry.NewRegistry[func(config map[string]any) Middleware]()
+	return registry.NewRegistry[MiddlewareEntry]()
 }
 
 func NewProviderRegistry() ProviderRegistry {

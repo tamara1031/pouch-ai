@@ -33,7 +33,10 @@ func NewPluginManager(mwRegistry domain.MiddlewareRegistry, pRegistry domain.Pro
 func (m *PluginManager) InitializeBuiltins() error {
 	// 1. Initialize Middlewares
 	for _, builtin := range middlewares.GetBuiltins() {
-		m.mwRegistry.Register(builtin.Info.ID, builtin.Factory)
+		m.mwRegistry.Register(builtin.Info.ID, domain.MiddlewareEntry{
+			Info:    builtin.Info,
+			Factory: builtin.Factory,
+		})
 	}
 
 	// 2. Initialize Providers via Builders
@@ -90,12 +93,31 @@ func (m *PluginManager) loadPlugin(path string) error {
 		return fmt.Errorf("GetFactory symbol has wrong type: expected *func(map[string]any) domain.Middleware")
 	}
 
-	// The ID of the middleware is the filename without extension
+	// Lookup GetInfo symbol
+	infoSymbol, err := p.Lookup("GetInfo")
+	if err != nil {
+		return fmt.Errorf("could not find GetInfo symbol: %w", err)
+	}
+
+	getInfo, ok := infoSymbol.(func() domain.PluginInfo)
+	if !ok {
+		return fmt.Errorf("GetInfo symbol has wrong type: expected func() domain.PluginInfo")
+	}
+
+	// The ID of the middleware is the filename without extension (fallback if not in info)
 	id := filepath.Base(path)
 	id = id[:len(id)-len(filepath.Ext(id))]
 
-	m.mwRegistry.Register(id, *factory)
-	fmt.Printf("Registered plugin middleware: %s\n", id)
+	info := getInfo()
+	if info.ID == "" {
+		info.ID = id
+	}
+
+	m.mwRegistry.Register(info.ID, domain.MiddlewareEntry{
+		Info:    info,
+		Factory: *factory,
+	})
+	fmt.Printf("Registered plugin middleware: %s\n", info.ID)
 
 	return nil
 }

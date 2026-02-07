@@ -356,14 +356,10 @@ func (s *KeyService) ListMiddlewares(ctx context.Context) ([]domain.PluginInfo, 
 	// Generic Registry.List() returns the items (factories).
 	// Registry.ListKeys() returns the IDs.
 
-	ids := s.mwRegistry.ListKeys()
-	infos := make([]domain.PluginInfo, 0, len(ids))
-	for _, id := range ids {
-		infos = append(infos, domain.PluginInfo{
-			ID: id,
-			// Schema is missing here because we only registered the factory.
-			// This is a known limitation that I should probably fix by registering a struct.
-		})
+	entries := s.mwRegistry.List()
+	infos := make([]domain.PluginInfo, 0, len(entries))
+	for _, entry := range entries {
+		infos = append(infos, entry.Info)
 	}
 	return infos, nil
 }
