@@ -42,12 +42,10 @@ export default function EditKeyModal({ editKey, middlewareInfos }: Props) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name,
-                    configuration: {
-                        provider: { id: providerId, config: providerConfig },
-                        middlewares: middlewares,
-                        budget_limit: parseFloat(budgetLimit) || 0,
-                        reset_period: parseInt(resetPeriod) || 0,
-                    },
+                    provider: { id: providerId, config: providerConfig },
+                    middlewares: middlewares,
+                    budget_limit: parseFloat(budgetLimit) || 0,
+                    reset_period: parseInt(resetPeriod) || 0,
                     expires_at: expiresAt,
                 }),
             });

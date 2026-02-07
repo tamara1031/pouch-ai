@@ -50,12 +50,10 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos }:
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name,
-                    configuration: {
-                        provider: { id: providerId, config: {} },
-                        middlewares: middlewares,
-                        budget_limit: parseFloat(budgetLimit) || 0,
-                        reset_period: parseInt(resetPeriod) || 0,
-                    },
+                    provider: { id: providerId, config: {} },
+                    middlewares: middlewares,
+                    budget_limit: parseFloat(budgetLimit) || 0,
+                    reset_period: parseInt(resetPeriod) || 0,
                     expires_at,
                 }),
             });
