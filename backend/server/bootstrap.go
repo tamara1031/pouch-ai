@@ -14,9 +14,9 @@ import (
 	"pouch-ai/backend/database"
 	"pouch-ai/backend/domain"
 	"pouch-ai/backend/infra"
+	"pouch-ai/backend/plugins/middlewares"
+	"pouch-ai/backend/plugins/providers"
 	"pouch-ai/backend/service"
-	"pouch-ai/plugins/middlewares"
-	"pouch-ai/plugins/providers"
 )
 
 type Server struct {
@@ -70,7 +70,7 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	mwRegistry.Register(middlewares.GetBudgetResetInfo(keyService), middlewares.NewBudgetResetMiddleware(keyService))
 
 	// Load external plugins
-	pluginManager := infra.NewPluginManager(mwRegistry, "./plugins/middlewares")
+	pluginManager := infra.NewPluginManager(mwRegistry, "./backend/plugins/middlewares")
 	if err := pluginManager.LoadPlugins(); err != nil {
 		fmt.Printf("WARN: Failed to load external plugins: %v\n", err)
 	}

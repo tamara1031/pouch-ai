@@ -2,7 +2,7 @@ package infra_test
 
 import (
 	"pouch-ai/backend/domain"
-	"pouch-ai/plugins/providers"
+	"pouch-ai/backend/plugins/providers"
 	"testing"
 )
 

@@ -11,7 +11,7 @@ import (
 	"pouch-ai/backend/domain"
 	"pouch-ai/backend/infra"
 	"pouch-ai/backend/service"
-	"pouch-ai/plugins/providers"
+	"pouch-ai/backend/plugins/providers"
 
 	"github.com/labstack/echo/v4"
 )
