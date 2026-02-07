@@ -21,7 +21,8 @@ func InitDB(dataDir string) error {
 		return fmt.Errorf("failed to create data directory: %w", err)
 	}
 
-	dsn := fmt.Sprintf("%s?_pragma=journal_mode=WAL&_pragma=busy_timeout=5000", dbPath)
+	// Enable WAL mode, foreign keys, and busy timeout
+	dsn := fmt.Sprintf("%s?_pragma=journal_mode=WAL&_pragma=busy_timeout=5000&_pragma=foreign_keys=ON", dbPath)
 	var err error
 	DB, err = sql.Open("sqlite", dsn)
 	if err != nil {
@@ -38,7 +39,6 @@ func InitDB(dataDir string) error {
 }
 
 func migrate(db *sql.DB) error {
-	// Simple schema migration
 	schema := `
 	CREATE TABLE IF NOT EXISTS app_keys (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,9 +48,25 @@ func migrate(db *sql.DB) error {
 		expires_at INTEGER,
 		budget_usage REAL DEFAULT 0,
 		last_reset_at INTEGER,
-		configuration TEXT,
-		created_at INTEGER NOT NULL
+		created_at INTEGER NOT NULL,
+		-- Provider (1:1, embedded)
+		provider_id TEXT NOT NULL DEFAULT 'openai',
+		provider_config TEXT,
+		-- Budget settings
+		budget_limit REAL DEFAULT 0,
+		reset_period INTEGER DEFAULT 0
 	);
+
+	CREATE TABLE IF NOT EXISTS app_key_middlewares (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		app_key_id INTEGER NOT NULL REFERENCES app_keys(id) ON DELETE CASCADE,
+		middleware_id TEXT NOT NULL,
+		config TEXT,
+		priority INTEGER NOT NULL DEFAULT 0,
+		UNIQUE(app_key_id, middleware_id)
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_middlewares_key ON app_key_middlewares(app_key_id);
 	`
 
 	_, err := db.Exec(schema)
@@ -58,42 +74,5 @@ func migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	// Add columns if they don't exist (for existing DBs)
-	addColumn(db, "app_keys", "configuration", "TEXT")
-	addColumn(db, "app_keys", "budget_usage", "REAL DEFAULT 0")
-
 	return nil
-}
-
-func addColumn(db *sql.DB, table, column, definition string) {
-	query := fmt.Sprintf("PRAGMA table_info(%s)", table)
-	rows, err := db.Query(query)
-	if err != nil {
-		log.Printf("Failed to check table info for %s: %v", table, err)
-		return
-	}
-	defer rows.Close()
-
-	exists := false
-	for rows.Next() {
-		var cid int
-		var name, dtype string
-		var notnull, pk int
-		var dfltValue interface{}
-		if err := rows.Scan(&cid, &name, &dtype, &notnull, &dfltValue, &pk); err == nil {
-			if name == column {
-				exists = true
-				break
-			}
-		}
-	}
-
-	if !exists {
-		alterQuery := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, definition)
-		if _, err := db.Exec(alterQuery); err != nil {
-			log.Printf("Failed to add column %s to %s: %v", column, table, err)
-		} else {
-			log.Printf("Added column %s to table %s", column, table)
-		}
-	}
 }
