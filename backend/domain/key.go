@@ -10,6 +10,7 @@ import (
 
 var keyNameRegex = regexp.MustCompile(`^[\pL\pN_\-\s]+$`)
 
+// ValidationError represents an error during data validation.
 type ValidationError struct {
 	Message string
 }
@@ -18,20 +19,25 @@ func (e *ValidationError) Error() string {
 	return e.Message
 }
 
+// IsValidationError checks if the error is a ValidationError.
 func IsValidationError(err error) bool {
 	_, ok := err.(*ValidationError)
 	return ok
 }
 
+// MaxKeyNameLength defines the maximum allowed characters for a key name.
 const MaxKeyNameLength = 50
 
+// ID represents a unique identifier for entities.
 type ID int64
 
+// PluginConfig holds configuration for a specific plugin (provider or middleware).
 type PluginConfig struct {
 	ID     string         `json:"id"`
 	Config map[string]any `json:"config,omitempty"`
 }
 
+// KeyConfiguration stores the operational settings for an API key.
 type KeyConfiguration struct {
 	Provider    PluginConfig   `json:"provider"`
 	Middlewares []PluginConfig `json:"middlewares"`
@@ -39,6 +45,7 @@ type KeyConfiguration struct {
 	ResetPeriod int            `json:"reset_period"`
 }
 
+// Key represents an API key entity with its metadata and usage stats.
 type Key struct {
 	ID            ID                `json:"id"`
 	Name          string            `json:"name"`
@@ -52,6 +59,7 @@ type Key struct {
 	Configuration *KeyConfiguration `json:"configuration"`
 }
 
+// IsExpired checks if the key has passed its expiration time.
 func (k *Key) IsExpired() bool {
 	if k.ExpiresAt == nil {
 		return false
@@ -59,6 +67,7 @@ func (k *Key) IsExpired() bool {
 	return time.Now().After(*k.ExpiresAt)
 }
 
+// Validate ensures the key's properties meet the required constraints.
 func (k *Key) Validate() error {
 	if k.Name == "" {
 		return &ValidationError{"key name is required"}
@@ -76,6 +85,7 @@ func (k *Key) Validate() error {
 	return nil
 }
 
+// Repository defines the persistence operations for Keys.
 type Repository interface {
 	Save(ctx context.Context, k *Key) error
 	GetByID(ctx context.Context, id ID) (*Key, error)

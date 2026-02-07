@@ -14,18 +14,23 @@ import (
 	"time"
 )
 
+// MockProvider is a zero-cost provider for testing.
+// It uses an internal httptest.Server to simulate OpenAI-compatible responses.
 type MockProvider struct {
 	server *httptest.Server
 	config map[string]string
 	mu     *sync.RWMutex
 }
 
+// MockBuilder constructs a MockProvider.
 type MockBuilder struct{}
 
+// Build creates a new MockProvider.
 func (b *MockBuilder) Build(ctx context.Context, cfg *config.Config) (domain.Provider, error) {
 	return NewMockProvider(), nil
 }
 
+// NewMockProvider initializes the internal mock server.
 func NewMockProvider() *MockProvider {
 	p := &MockProvider{
 		config: make(map[string]string),
@@ -35,6 +40,7 @@ func NewMockProvider() *MockProvider {
 	return p
 }
 
+// Schema returns the configuration fields (e.g. custom mock response).
 func (p *MockProvider) Schema() domain.PluginSchema {
 	return domain.PluginSchema{
 		"mock_response": {
@@ -46,6 +52,7 @@ func (p *MockProvider) Schema() domain.PluginSchema {
 	}
 }
 
+// Configure updates the provider settings.
 func (p *MockProvider) Configure(config map[string]any) (domain.Provider, error) {
 	newP := *p
 	// Share the server and lock, but copy the config
@@ -58,20 +65,24 @@ func (p *MockProvider) Configure(config map[string]any) (domain.Provider, error)
 	return &newP, nil
 }
 
+// Name returns "mock".
 func (p *MockProvider) Name() string {
 	return "mock"
 }
 
+// GetPricing returns zero cost.
 func (p *MockProvider) GetPricing(model domain.Model) (domain.Pricing, error) {
 	// Mock is free
 	return domain.Pricing{Input: 0, Output: 0}, nil
 }
 
+// CountTokens approximates token count (4 chars = 1 token).
 func (p *MockProvider) CountTokens(model domain.Model, text string) (int, error) {
 	// Simple approximation: 4 chars = 1 token
 	return len(text) / 4, nil
 }
 
+// PrepareHTTPRequest redirects the request to the internal mock server.
 func (p *MockProvider) PrepareHTTPRequest(ctx context.Context, model domain.Model, body []byte) (*http.Request, error) {
 	// Direct the request to our internal mock server
 	req, err := http.NewRequestWithContext(ctx, "POST", p.server.URL, bytes.NewBuffer(body))
@@ -82,6 +93,7 @@ func (p *MockProvider) PrepareHTTPRequest(ctx context.Context, model domain.Mode
 	return req, nil
 }
 
+// EstimateUsage returns a zero-cost usage estimate.
 func (p *MockProvider) EstimateUsage(model domain.Model, requestBody []byte) (*domain.Usage, error) {
 	var req struct {
 		Messages []struct {
@@ -104,6 +116,7 @@ func (p *MockProvider) EstimateUsage(model domain.Model, requestBody []byte) (*d
 	}, nil
 }
 
+// ParseOutputUsage approximates output tokens.
 func (p *MockProvider) ParseOutputUsage(model domain.Model, responseBody []byte, isStream bool) (int, error) {
 	if !isStream {
 		var resp struct {
@@ -158,6 +171,7 @@ func (p *MockProvider) ParseOutputUsage(model domain.Model, responseBody []byte,
 	return len(fullContent.String()) / 4, nil
 }
 
+// ProcessStreamChunk extracts content from a mock SSE event.
 func (p *MockProvider) ProcessStreamChunk(chunk []byte) (string, error) {
 	chunk = bytes.TrimSpace(chunk)
 	if !bytes.HasPrefix(chunk, []byte("data: ")) || bytes.HasSuffix(chunk, []byte("[DONE]")) {
@@ -180,6 +194,7 @@ func (p *MockProvider) ProcessStreamChunk(chunk []byte) (string, error) {
 	return "", nil
 }
 
+// ParseRequest extracts model and stream flag.
 func (p *MockProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
 	var req struct {
 		Model  string `json:"model"`
@@ -191,6 +206,7 @@ func (p *MockProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
 	return domain.Model(req.Model), req.Stream, nil
 }
 
+// GetUsage returns 0.
 func (p *MockProvider) GetUsage(ctx context.Context) (float64, error) {
 	return 0, nil
 }

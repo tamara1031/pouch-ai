@@ -10,6 +10,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// GetInfo returns the registration metadata for the Rate Limit middleware.
 func GetInfo() domain.MiddlewareInfo {
 	return domain.MiddlewareInfo{
 		ID: "rate_limit",
@@ -21,6 +22,8 @@ func GetInfo() domain.MiddlewareInfo {
 	}
 }
 
+// NewRateLimitMiddleware creates a token-bucket based rate limiter using golang.org/x/time/rate.
+// It maintains a separate limiter for each API key ID.
 func NewRateLimitMiddleware(config map[string]any) domain.Middleware {
 	var (
 		limiters = make(map[int64]*rate.Limiter)

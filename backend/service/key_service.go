@@ -16,6 +16,8 @@ type cachedKey struct {
 	expiresAt time.Time
 }
 
+// KeyService manages the lifecycle, validation, and usage tracking of API keys.
+// It implements a write-through cache strategy for high-performance key verification.
 type KeyService struct {
 	repo       domain.Repository
 	registry   domain.ProviderRegistry
@@ -24,6 +26,7 @@ type KeyService struct {
 	cacheMu    sync.RWMutex
 }
 
+// NewKeyService creates a new instance of KeyService.
 func NewKeyService(repo domain.Repository, registry domain.ProviderRegistry, mwRegistry domain.MiddlewareRegistry) *KeyService {
 	return &KeyService{
 		repo:       repo,
@@ -33,6 +36,7 @@ func NewKeyService(repo domain.Repository, registry domain.ProviderRegistry, mwR
 	}
 }
 
+// CreateKeyInput defines the parameters for creating a new API key.
 type CreateKeyInput struct {
 	Name        string
 	Provider    domain.PluginConfig
@@ -43,6 +47,8 @@ type CreateKeyInput struct {
 	AutoRenew   bool
 }
 
+// CreateKey generates a new API key with the specified configuration and persists it.
+// It returns the raw key string (which should be shown to the user once) and the Key entity.
 func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (string, *domain.Key, error) {
 	if input.Provider.ID != "" {
 		if _, err := s.registry.Get(input.Provider.ID); err != nil {
@@ -91,6 +97,8 @@ func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (strin
 	return rawKey, k, nil
 }
 
+// VerifyKey authenticates a raw API key string.
+// It checks the local cache first, then the database. If successful, it caches the key.
 func (s *KeyService) VerifyKey(ctx context.Context, rawKey string) (*domain.Key, error) {
 	hash := s.hashKey(rawKey)
 
@@ -122,10 +130,12 @@ func (s *KeyService) VerifyKey(ctx context.Context, rawKey string) (*domain.Key,
 	return k, nil
 }
 
+// ListKeys retrieves all API keys from the repository.
 func (s *KeyService) ListKeys(ctx context.Context) ([]*domain.Key, error) {
 	return s.repo.List(ctx)
 }
 
+// UpdateKeyInput defines the parameters for updating an existing API key.
 type UpdateKeyInput struct {
 	ID          int64
 	Name        string
@@ -137,6 +147,8 @@ type UpdateKeyInput struct {
 	AutoRenew   bool
 }
 
+// UpdateKey modifies an existing API key's configuration.
+// It invalidates the cache entry for the key.
 func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error {
 	k, err := s.repo.GetByID(ctx, domain.ID(input.ID))
 	if err != nil {
@@ -182,6 +194,7 @@ func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error 
 	return nil
 }
 
+// DeleteKey removes an API key from the system and invalidates the cache.
 func (s *KeyService) DeleteKey(ctx context.Context, id int64) error {
 	k, _ := s.repo.GetByID(ctx, domain.ID(id))
 	if err := s.repo.Delete(ctx, domain.ID(id)); err != nil {
@@ -195,6 +208,7 @@ func (s *KeyService) DeleteKey(ctx context.Context, id int64) error {
 	return nil
 }
 
+// ResetKeyUsage resets the budget usage counter for a key.
 func (s *KeyService) ResetKeyUsage(ctx context.Context, k *domain.Key) error {
 	k.BudgetUsage = 0
 	k.LastResetAt = time.Now()
@@ -210,6 +224,7 @@ func (s *KeyService) ResetKeyUsage(ctx context.Context, k *domain.Key) error {
 	return nil
 }
 
+// RenewKey extends the expiration of an auto-renewable key and resets its usage.
 func (s *KeyService) RenewKey(ctx context.Context, k *domain.Key) error {
 	k.BudgetUsage = 0
 	k.LastResetAt = time.Now()
@@ -235,6 +250,7 @@ func (s *KeyService) RenewKey(ctx context.Context, k *domain.Key) error {
 	return nil
 }
 
+// IncrementUsage adds to the accumulated cost of a key.
 func (s *KeyService) IncrementUsage(ctx context.Context, key *domain.Key, amount float64) error {
 	if err := s.repo.IncrementUsage(ctx, key.ID, amount); err != nil {
 		return err
@@ -249,6 +265,7 @@ func (s *KeyService) IncrementUsage(ctx context.Context, key *domain.Key, amount
 	return nil
 }
 
+// GetProviderUsage aggregates usage statistics from all registered providers.
 func (s *KeyService) GetProviderUsage(ctx context.Context) (map[string]float64, error) {
 	providers := s.registry.List()
 	usage := make(map[string]float64, len(providers))
@@ -274,10 +291,12 @@ func (s *KeyService) GetProviderUsage(ctx context.Context) (map[string]float64, 
 	return usage, nil
 }
 
+// ListProviders returns information about all available providers.
 func (s *KeyService) ListProviders(ctx context.Context) ([]domain.ProviderInfo, error) {
 	return s.registry.ListInfo(), nil
 }
 
+// ListMiddlewares returns information about all available middlewares.
 func (s *KeyService) ListMiddlewares(ctx context.Context) ([]domain.MiddlewareInfo, error) {
 	return s.mwRegistry.List(), nil
 }

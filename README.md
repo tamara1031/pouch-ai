@@ -64,9 +64,27 @@ Run the server with default settings:
 
 #### Environment Variables
 
-The application relies on environment variables for provider authentication:
+The application relies on environment variables for configuration and provider authentication. You can set these in your shell or use a `.env` file if supported by your deployment method.
 
-- `OPENAI_API_KEY`: Required when using the OpenAI provider.
+- **General**:
+    - `PORT`: Port to run the server on (default: `8080`).
+    - `DATA_DIR`: Directory to store the SQLite database (default: `./data`).
+    - `CORS_ORIGINS`: Comma-separated list of allowed CORS origins (default: `*`).
+
+- **Providers**:
+    - `OPENAI_API_KEY`: **Required** when using the OpenAI provider.
+    - `OPENAI_API_URL`: Optional override for the OpenAI API base URL (default: `https://api.openai.com/v1`).
+
+### Mock Provider
+
+For development and testing purposes, Pouch AI includes a **Mock Provider** that simulates OpenAI responses at zero cost.
+
+To use it:
+1. Create a new Application Key in the dashboard.
+2. Set the Provider ID to `mock`.
+3. (Optional) Configure a custom mock response in the key settings.
+
+The mock provider supports both streaming and non-streaming requests.
 
 ## Architecture
 

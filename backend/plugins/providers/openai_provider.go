@@ -13,10 +13,13 @@ import (
 	"time"
 )
 
+// TokenCounter defines the interface for counting tokens in a text string.
 type TokenCounter interface {
 	Count(model string, text string) (int, error)
 }
 
+// OpenAIProvider implements the domain.Provider interface for OpenAI's Chat Completions API.
+// It handles authentication, token counting (using tiktoken), and pricing calculation.
 type OpenAIProvider struct {
 	pricing      *OpenAIPricing
 	tokenCounter TokenCounter
@@ -24,8 +27,11 @@ type OpenAIProvider struct {
 	baseURL      string
 }
 
+// OpenAIBuilder is responsible for constructing an OpenAIProvider instance.
 type OpenAIBuilder struct{}
 
+// Build creates a new OpenAIProvider using configuration from environment variables or the config object.
+// Priority: Env (OPENAI_API_KEY) > Config.
 func (b *OpenAIBuilder) Build(ctx context.Context, cfg *config.Config) (domain.Provider, error) {
 	// Priority: Env > Flag > Default
 	apiKey := os.Getenv("OPENAI_API_KEY")
@@ -55,6 +61,7 @@ func (b *OpenAIBuilder) Build(ctx context.Context, cfg *config.Config) (domain.P
 	return NewOpenAIProvider(apiKey, apiURL, pricing, tokenCounter), nil
 }
 
+// NewOpenAIProvider creates a new instance with the given dependencies.
 func NewOpenAIProvider(apiKey string, baseURL string, pricing *OpenAIPricing, counter TokenCounter) *OpenAIProvider {
 	if baseURL == "" {
 		baseURL = "https://api.openai.com/v1"
@@ -70,6 +77,7 @@ func NewOpenAIProvider(apiKey string, baseURL string, pricing *OpenAIPricing, co
 	}
 }
 
+// Schema returns the configuration fields available for this provider.
 func (p *OpenAIProvider) Schema() domain.PluginSchema {
 	return domain.PluginSchema{
 		"api_key": {
@@ -86,6 +94,7 @@ func (p *OpenAIProvider) Schema() domain.PluginSchema {
 	}
 }
 
+// Configure creates a new instance of the provider with updated configuration.
 func (p *OpenAIProvider) Configure(config map[string]any) (domain.Provider, error) {
 	newP := *p
 	if val, ok := config["api_key"]; ok {
@@ -101,10 +110,12 @@ func (p *OpenAIProvider) Configure(config map[string]any) (domain.Provider, erro
 	return &newP, nil
 }
 
+// Name returns the provider identifier "openai".
 func (p *OpenAIProvider) Name() string {
 	return "openai"
 }
 
+// GetPricing retrieves the cost per 1M tokens for the specified model.
 func (p *OpenAIProvider) GetPricing(model domain.Model) (domain.Pricing, error) {
 	mp, err := p.pricing.GetPrice(string(model))
 	if err != nil {
@@ -116,10 +127,12 @@ func (p *OpenAIProvider) GetPricing(model domain.Model) (domain.Pricing, error) 
 	}, nil
 }
 
+// CountTokens calculates the number of tokens in the text using the configured tokenizer.
 func (p *OpenAIProvider) CountTokens(model domain.Model, text string) (int, error) {
 	return p.tokenCounter.Count(string(model), text)
 }
 
+// PrepareHTTPRequest constructs the HTTP request to send to OpenAI.
 func (p *OpenAIProvider) PrepareHTTPRequest(ctx context.Context, model domain.Model, body []byte) (*http.Request, error) {
 	url := p.baseURL + "/chat/completions"
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
@@ -133,6 +146,7 @@ func (p *OpenAIProvider) PrepareHTTPRequest(ctx context.Context, model domain.Mo
 	return req, nil
 }
 
+// EstimateUsage calculates the cost of the input prompt before the request is sent.
 func (p *OpenAIProvider) EstimateUsage(model domain.Model, body []byte) (*domain.Usage, error) {
 	var req struct {
 		Model    string `json:"model"`
@@ -165,6 +179,8 @@ func (p *OpenAIProvider) EstimateUsage(model domain.Model, body []byte) (*domain
 	}, nil
 }
 
+// ParseOutputUsage determines the token usage from the response.
+// For non-streaming, it parses the usage field. For streaming, it counts tokens in the aggregated content.
 func (p *OpenAIProvider) ParseOutputUsage(model domain.Model, responseBody []byte, isStream bool) (int, error) {
 	respStr := string(responseBody)
 
@@ -196,6 +212,7 @@ func (p *OpenAIProvider) ParseOutputUsage(model domain.Model, responseBody []byt
 	return len(respStr) / 4, nil
 }
 
+// ProcessStreamChunk extracts the content delta from a single SSE event line.
 func (p *OpenAIProvider) ProcessStreamChunk(chunk []byte) (string, error) {
 	chunk = bytes.TrimSpace(chunk)
 	if !bytes.HasPrefix(chunk, []byte("data: ")) || bytes.HasSuffix(chunk, []byte("[DONE]")) {
@@ -218,6 +235,7 @@ func (p *OpenAIProvider) ProcessStreamChunk(chunk []byte) (string, error) {
 	return "", nil
 }
 
+// ParseRequest extracts the model and streaming flag from the request body.
 func (p *OpenAIProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
 	var req struct {
 		Model  string `json:"model"`
@@ -229,6 +247,7 @@ func (p *OpenAIProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
 	return domain.Model(req.Model), req.Stream, nil
 }
 
+// GetUsage fetches the total billing usage from the OpenAI Dashboard API (unofficial).
 func (p *OpenAIProvider) GetUsage(ctx context.Context) (float64, error) {
 	now := time.Now()
 	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02")

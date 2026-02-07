@@ -8,11 +8,14 @@ import (
 	"pouch-ai/backend/util"
 )
 
+// ExecutionHandler is responsible for the final stage of request processing:
+// sending the HTTP request to the external provider and handling the response.
 type ExecutionHandler struct {
 	client *http.Client
 	repo   domain.Repository
 }
 
+// NewExecutionHandler creates a new ExecutionHandler.
 func NewExecutionHandler(repo domain.Repository) *ExecutionHandler {
 	return &ExecutionHandler{
 		client: &http.Client{},
@@ -20,6 +23,11 @@ func NewExecutionHandler(repo domain.Repository) *ExecutionHandler {
 	}
 }
 
+// Handle executes the request against the configured provider.
+// It handles both streaming and non-streaming responses, ensuring usage is tracked.
+//
+// For non-streaming requests, it reads the full body to calculate exact costs.
+// For streaming requests, it returns a wrapped reader (CountingReader) that tracks usage as data is streamed.
 func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error) {
 	// 1. Prepare Request
 	httpReq, err := req.Provider.PrepareHTTPRequest(req.Context, req.Model, req.RawBody)

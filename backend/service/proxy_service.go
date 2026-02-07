@@ -6,12 +6,15 @@ import (
 	"time"
 )
 
+// ProxyService orchestrates the request processing flow.
+// It handles key validation, budget enforcement, middleware execution, and usage tracking.
 type ProxyService struct {
 	finalHandler domain.Handler
 	mwRegistry   domain.MiddlewareRegistry
 	keyService   *KeyService
 }
 
+// NewProxyService creates a new instance of ProxyService.
 func NewProxyService(finalHandler domain.Handler, mwRegistry domain.MiddlewareRegistry, keyService *KeyService) *ProxyService {
 	return &ProxyService{
 		finalHandler: finalHandler,
@@ -20,6 +23,12 @@ func NewProxyService(finalHandler domain.Handler, mwRegistry domain.MiddlewareRe
 	}
 }
 
+// Execute processes the incoming request through the following steps:
+// 1. Key Validation & Auto-Renewal
+// 2. Budget Reset (if period passed)
+// 3. Budget Limit Enforcement
+// 4. Dynamic Middleware Chain Execution (including the final handler)
+// 5. Usage Tracking (post-execution)
 func (s *ProxyService) Execute(req *domain.Request) (*domain.Response, error) {
 	if req.Key == nil {
 		return nil, fmt.Errorf("no application key provided")
