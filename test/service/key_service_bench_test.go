@@ -47,6 +47,10 @@ func (m *MockProvider) GetUsage(ctx context.Context) (float64, error) {
 	return 10.0, nil
 }
 
+func (m *MockProvider) ProcessStreamChunk(chunk []byte) (string, error) {
+	return "", nil
+}
+
 type BenchRegistry struct {
 	providers []domain.Provider
 }
