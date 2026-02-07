@@ -2,11 +2,14 @@ package api
 
 import (
 	"io"
+	"net/http"
 	"pouch-ai/internal/domain"
 	"pouch-ai/internal/service"
 
 	"github.com/labstack/echo/v4"
 )
+
+const MaxBodySize = 10 * 1024 * 1024 // 10MB
 
 type ProxyHandler struct {
 	proxyService *service.ProxyService
@@ -21,8 +24,12 @@ func NewProxyHandler(ps *service.ProxyService, r domain.Registry) *ProxyHandler 
 }
 
 func (h *ProxyHandler) Proxy(c echo.Context) error {
+	c.Request().Body = http.MaxBytesReader(c.Response(), c.Request().Body, MaxBodySize)
 	body, err := io.ReadAll(c.Request().Body)
 	if err != nil {
+		if err.Error() == "http: request body too large" {
+			return NewAPIError(c, http.StatusRequestEntityTooLarge, "Request body too large")
+		}
 		return BadRequest(c, "Failed to read body")
 	}
 
