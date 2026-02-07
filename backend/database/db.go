@@ -43,18 +43,12 @@ func migrate(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS app_keys (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
-		provider TEXT NOT NULL DEFAULT 'openai',
 		key_hash TEXT NOT NULL UNIQUE,
 		prefix TEXT NOT NULL,
 		expires_at INTEGER,
-		budget_limit REAL DEFAULT 0,
 		budget_usage REAL DEFAULT 0,
-		budget_period TEXT,
 		last_reset_at INTEGER,
-		is_mock BOOLEAN DEFAULT 0,
-		mock_config TEXT,
-		rate_limit INTEGER DEFAULT 10,
-		rate_period TEXT DEFAULT 'minute',
+		configuration TEXT,
 		created_at INTEGER NOT NULL
 	);
 	`
@@ -65,9 +59,8 @@ func migrate(db *sql.DB) error {
 	}
 
 	// Add columns if they don't exist (for existing DBs)
-	addColumn(db, "app_keys", "provider", "TEXT NOT NULL DEFAULT 'openai'")
-	addColumn(db, "app_keys", "rate_limit", "INTEGER DEFAULT 10")
-	addColumn(db, "app_keys", "rate_period", "TEXT DEFAULT 'minute'")
+	addColumn(db, "app_keys", "configuration", "TEXT")
+	addColumn(db, "app_keys", "budget_usage", "REAL DEFAULT 0")
 
 	return nil
 }
