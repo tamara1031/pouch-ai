@@ -83,41 +83,25 @@ func (m *PluginManager) loadPlugin(path string) error {
 		return fmt.Errorf("could not open plugin: %w", err)
 	}
 
-	symbol, err := p.Lookup("GetFactory")
+	sym, err := p.Lookup("GetPlugin")
 	if err != nil {
-		return fmt.Errorf("could not find GetFactory symbol: %w", err)
+		return fmt.Errorf("could not find GetPlugin symbol: %w", err)
 	}
 
-	factory, ok := symbol.(*func(config map[string]any) domain.Middleware)
+	getPlugin, ok := sym.(func() domain.MiddlewareEntry)
 	if !ok {
-		return fmt.Errorf("GetFactory symbol has wrong type: expected *func(map[string]any) domain.Middleware")
+		return fmt.Errorf("GetPlugin symbol has wrong type: expected func() domain.MiddlewareEntry")
 	}
 
-	// Lookup GetInfo symbol
-	infoSymbol, err := p.Lookup("GetInfo")
-	if err != nil {
-		return fmt.Errorf("could not find GetInfo symbol: %w", err)
+	entry := getPlugin()
+	if entry.Info.ID == "" {
+		// Fallback to filename if ID is missing
+		id := filepath.Base(path)
+		entry.Info.ID = id[:len(id)-len(filepath.Ext(id))]
 	}
 
-	getInfo, ok := infoSymbol.(func() domain.PluginInfo)
-	if !ok {
-		return fmt.Errorf("GetInfo symbol has wrong type: expected func() domain.PluginInfo")
-	}
-
-	// The ID of the middleware is the filename without extension (fallback if not in info)
-	id := filepath.Base(path)
-	id = id[:len(id)-len(filepath.Ext(id))]
-
-	info := getInfo()
-	if info.ID == "" {
-		info.ID = id
-	}
-
-	m.mwRegistry.Register(info.ID, domain.MiddlewareEntry{
-		Info:    info,
-		Factory: *factory,
-	})
-	fmt.Printf("Registered plugin middleware: %s\n", info.ID)
+	m.mwRegistry.Register(entry.Info.ID, entry)
+	fmt.Printf("Registered plugin middleware: %s\n", entry.Info.ID)
 
 	return nil
 }
