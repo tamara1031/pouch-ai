@@ -1,17 +1,17 @@
 <script lang="ts">
   import { Wallet, Plus } from 'lucide-svelte';
-  import KeyList from './components/KeyList.svelte';
-  import CreateKeyModal from './components/modals/CreateKeyModal.svelte';
+  import KeyList from './ui/features/keys/KeyList.svelte';
+  import CreateKeyModal from './ui/features/keys/CreateKeyModal.svelte';
+  import { keyStore } from './application/stores/keyStore';
 
   let showCreateModal = false;
-  let keyList: any; // Reference to KeyList component
 
   function handleKeyCreated() {
-    showCreateModal = false;
-    // Reload keys
-    if (keyList) {
-      keyList.reload();
-    }
+    // modal handles showing the key, we just refresh the list which is done via store
+    // CreateKeyModal emits 'created', we can use it to close if we want, 
+    // but the modal logic I wrote keeps it open to show the key.
+    // So actually we might just want to reload the list in the background.
+    keyStore.loadKeys();
   }
 </script>
 
@@ -20,7 +20,7 @@
     <div class="container nav-content">
       <div class="brand">
         <div class="logo">
-          <Wallet size={24} />
+          <Wallet size={20} />
         </div>
         <h1>Pouch AI</h1>
       </div>
@@ -41,7 +41,7 @@
       </button>
     </div>
 
-    <KeyList bind:this={keyList} />
+    <KeyList />
   </main>
 
   {#if showCreateModal}
@@ -53,6 +53,28 @@
 </div>
 
 <style>
+  :global(:root) {
+    --color-primary: #3b82f6;
+    --color-primary-hover: #2563eb;
+    --color-bg: #0a0a0a;
+    --color-surface: #171717;
+    --color-text-main: #fff;
+    --color-text-muted: #a3a3a3;
+    --color-border: #333;
+    
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  :global(body) {
+    background-color: var(--color-bg);
+    color: var(--color-text-main);
+    margin: 0;
+  }
+  
+  :global(*) {
+      box-sizing: border-box;
+  }
+
   .app-layout {
     min-height: 100vh;
     background: linear-gradient(to bottom, #0a0a0a, #111);
@@ -88,21 +110,21 @@
   }
 
   .logo {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     background: var(--color-primary);
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
   }
 
   h1 {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
   }
 
   .main-content {
@@ -133,19 +155,20 @@
     color: white;
     border: none;
     padding: 0.6rem 1.2rem;
-    border-radius: var(--radius);
+    border-radius: 8px;
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
   }
 
   .btn-pri:hover {
     background: var(--color-primary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
   }
 
   .btn-pri:active {
