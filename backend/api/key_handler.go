@@ -23,6 +23,7 @@ type KeyResponse struct {
 	Name          string                   `json:"name"`
 	Prefix        string                   `json:"prefix"`
 	ExpiresAt     *int64                   `json:"expires_at"`
+	AutoRenew     bool                     `json:"auto_renew"`
 	BudgetUsage   float64                  `json:"budget_usage"`
 	CreatedAt     int64                    `json:"created_at"`
 	Configuration *domain.KeyConfiguration `json:"configuration"`
@@ -33,6 +34,7 @@ func mapKeyToResponse(k *domain.Key) KeyResponse {
 		ID:            int64(k.ID),
 		Name:          k.Name,
 		Prefix:        k.Prefix,
+		AutoRenew:     k.AutoRenew,
 		BudgetUsage:   k.BudgetUsage,
 		CreatedAt:     k.CreatedAt.Unix(),
 		Configuration: k.Configuration,
@@ -66,6 +68,7 @@ func (h *KeyHandler) CreateKey(c echo.Context) error {
 		Middlewares []domain.PluginConfig `json:"middlewares"`
 		BudgetLimit float64               `json:"budget_limit"`
 		ResetPeriod int                   `json:"reset_period"`
+		AutoRenew   bool                  `json:"auto_renew"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return BadRequest(c, err.Error())
@@ -78,6 +81,7 @@ func (h *KeyHandler) CreateKey(c echo.Context) error {
 		Middlewares: req.Middlewares,
 		BudgetLimit: req.BudgetLimit,
 		ResetPeriod: req.ResetPeriod,
+		AutoRenew:   req.AutoRenew,
 	}
 
 	raw, _, err := h.service.CreateKey(c.Request().Context(), input)
@@ -106,6 +110,7 @@ func (h *KeyHandler) UpdateKey(c echo.Context) error {
 		Middlewares []domain.PluginConfig `json:"middlewares"`
 		BudgetLimit float64               `json:"budget_limit"`
 		ResetPeriod int                   `json:"reset_period"`
+		AutoRenew   bool                  `json:"auto_renew"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return BadRequest(c, err.Error())
@@ -119,6 +124,7 @@ func (h *KeyHandler) UpdateKey(c echo.Context) error {
 		Middlewares: req.Middlewares,
 		BudgetLimit: req.BudgetLimit,
 		ResetPeriod: req.ResetPeriod,
+		AutoRenew:   req.AutoRenew,
 	}
 
 	err = h.service.UpdateKey(c.Request().Context(), input)

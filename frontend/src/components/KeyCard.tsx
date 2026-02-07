@@ -59,6 +59,9 @@ export default function KeyCard({ keyData, middlewareInfos, onEdit, onRevoke }: 
                         <div class="flex flex-wrap items-center gap-3">
                             <h2 class="text-xl font-bold text-white tracking-tight">{name}</h2>
                             <div class="px-2 py-0.5 rounded bg-white/5 text-[9px] font-bold uppercase text-white/40 tracking-wider border border-white/5">{configuration?.provider.id || "openai"}</div>
+                            {keyData.auto_renew && (
+                                <div class="px-2 py-0.5 rounded bg-primary/10 text-[9px] font-bold uppercase text-primary tracking-wider border border-primary/20">Auto-Renew</div>
+                            )}
                             <StatusBadge status={status} isMock={isMock} />
                         </div>
                         <div class="flex items-center gap-2">

@@ -28,7 +28,7 @@ export default function Modals() {
                 ]);
                 const mwData = await mwRes.json();
                 const pData = await pRes.json();
-                setMiddlewareInfo(mwData || []);
+                setMiddlewareInfo(mwData?.middlewares || []);
                 setProviderInfo(pData.providers || []);
             } catch (err) {
                 console.error("Failed to load plugin info:", err);

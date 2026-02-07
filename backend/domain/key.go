@@ -44,6 +44,7 @@ type Key struct {
 	KeyHash       string            `json:"key_hash"`
 	Prefix        string            `json:"prefix"`
 	ExpiresAt     *time.Time        `json:"expires_at"`
+	AutoRenew     bool              `json:"auto_renew"`
 	BudgetUsage   float64           `json:"budget_usage"`
 	LastResetAt   time.Time         `json:"last_reset_at"`
 	CreatedAt     time.Time         `json:"created_at"`

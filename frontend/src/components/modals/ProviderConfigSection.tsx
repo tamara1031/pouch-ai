@@ -25,25 +25,26 @@ export default function ProviderConfigSection({ providerId, providerInfos, confi
         onConfigUpdate(key, val);
     };
 
+    const providerName = providerId.charAt(0).toUpperCase() + providerId.slice(1);
+
     return (
-        <div class="border-t border-white/5 pt-6 space-y-4">
-            <label class="label p-0">
-                <span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">
-                    {providerId.replace(/_/g, " ")} Configuration
+        <div class="space-y-4">
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-primary"></div>
+                <span class="text-sm font-semibold text-white/70">
+                    {providerName} Settings
                 </span>
-            </label>
-            <div class="p-4 rounded-xl bg-white/5 border border-white/5 space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {Object.keys(providerInfo.schema).map(key => (
-                        <SchemaField
-                            key={key}
-                            id={key}
-                            schema={providerInfo.schema[key]}
-                            value={config[key] ?? providerInfo.schema[key].default ?? ""}
-                            onUpdate={(val, type) => handleUpdate(key, val, type)}
-                        />
-                    ))}
-                </div>
+            </div>
+            <div class="p-5 rounded-xl bg-base-200/30 border border-white/5 space-y-4">
+                {Object.keys(providerInfo.schema).map(key => (
+                    <SchemaField
+                        key={key}
+                        id={key}
+                        schema={providerInfo.schema[key]}
+                        value={config[key] ?? providerInfo.schema[key].default ?? ""}
+                        onUpdate={(val, type) => handleUpdate(key, val, type)}
+                    />
+                ))}
             </div>
         </div>
     );

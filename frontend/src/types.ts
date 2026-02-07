@@ -41,6 +41,7 @@ export interface Key {
     name: string;
     prefix: string;
     expires_at: number | null;
+    auto_renew: boolean;
     budget_usage: number;
     created_at: number;
     configuration: KeyConfiguration;

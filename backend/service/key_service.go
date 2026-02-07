@@ -40,6 +40,7 @@ type CreateKeyInput struct {
 	Middlewares []domain.PluginConfig
 	BudgetLimit float64
 	ResetPeriod int
+	AutoRenew   bool
 }
 
 func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (string, *domain.Key, error) {
@@ -58,10 +59,11 @@ func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (strin
 	prefix := rawKey[:8]
 
 	k := &domain.Key{
-		ID:      0,
-		Name:    input.Name,
-		KeyHash: hash,
-		Prefix:  prefix,
+		ID:        0,
+		Name:      input.Name,
+		KeyHash:   hash,
+		Prefix:    prefix,
+		AutoRenew: input.AutoRenew,
 		Configuration: &domain.KeyConfiguration{
 			Provider:    input.Provider,
 			Middlewares: input.Middlewares,
@@ -132,6 +134,7 @@ type UpdateKeyInput struct {
 	Middlewares []domain.PluginConfig
 	BudgetLimit float64
 	ResetPeriod int
+	AutoRenew   bool
 }
 
 func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error {
@@ -150,6 +153,7 @@ func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error 
 	}
 
 	k.Name = input.Name
+	k.AutoRenew = input.AutoRenew
 	k.Configuration = &domain.KeyConfiguration{
 		Provider:    input.Provider,
 		Middlewares: input.Middlewares,
@@ -202,6 +206,31 @@ func (s *KeyService) ResetKeyUsage(ctx context.Context, k *domain.Key) error {
 		entry.key.LastResetAt = k.LastResetAt
 	}
 	s.cacheMu.Unlock()
+	return nil
+}
+
+func (s *KeyService) RenewKey(ctx context.Context, k *domain.Key) error {
+	k.BudgetUsage = 0
+	k.LastResetAt = time.Now()
+
+	// Extend expiration if it exists
+	if k.ExpiresAt != nil {
+		period := 30 * 24 * time.Hour // Default 30 days
+		if k.Configuration != nil && k.Configuration.ResetPeriod > 0 {
+			period = time.Duration(k.Configuration.ResetPeriod) * time.Second
+		}
+		newExpiry := time.Now().Add(period)
+		k.ExpiresAt = &newExpiry
+	}
+
+	if err := s.repo.Update(ctx, k); err != nil {
+		return err
+	}
+
+	s.cacheMu.Lock()
+	delete(s.cache, k.KeyHash)
+	s.cacheMu.Unlock()
+
 	return nil
 }
 

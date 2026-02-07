@@ -45,10 +45,15 @@ func (r *SQLiteKeyRepository) Save(ctx context.Context, k *domain.Key) error {
 		resetPeriod = k.Configuration.ResetPeriod
 	}
 
+	autoRenew := 0
+	if k.AutoRenew {
+		autoRenew = 1
+	}
+
 	res, err := tx.ExecContext(ctx, `
-		INSERT INTO app_keys (name, key_hash, prefix, expires_at, budget_usage, last_reset_at, created_at, provider_id, provider_config, budget_limit, reset_period)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, k.Name, k.KeyHash, k.Prefix, expiresAt, k.BudgetUsage, k.LastResetAt.Unix(), k.CreatedAt.Unix(), providerID, providerConfig, budgetLimit, resetPeriod)
+		INSERT INTO app_keys (name, key_hash, prefix, expires_at, auto_renew, budget_usage, last_reset_at, created_at, provider_id, provider_config, budget_limit, reset_period)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, k.Name, k.KeyHash, k.Prefix, expiresAt, autoRenew, k.BudgetUsage, k.LastResetAt.Unix(), k.CreatedAt.Unix(), providerID, providerConfig, budgetLimit, resetPeriod)
 
 	if err != nil {
 		return err
@@ -83,7 +88,7 @@ func (r *SQLiteKeyRepository) Save(ctx context.Context, k *domain.Key) error {
 
 func (r *SQLiteKeyRepository) GetByID(ctx context.Context, id domain.ID) (*domain.Key, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, name, key_hash, prefix, expires_at, budget_usage, last_reset_at, created_at,
+		SELECT id, name, key_hash, prefix, expires_at, auto_renew, budget_usage, last_reset_at, created_at,
 		       provider_id, provider_config, budget_limit, reset_period
 		FROM app_keys WHERE id = ?
 	`, id)
@@ -98,7 +103,7 @@ func (r *SQLiteKeyRepository) GetByID(ctx context.Context, id domain.ID) (*domai
 
 func (r *SQLiteKeyRepository) GetByHash(ctx context.Context, hash string) (*domain.Key, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, name, key_hash, prefix, expires_at, budget_usage, last_reset_at, created_at,
+		SELECT id, name, key_hash, prefix, expires_at, auto_renew, budget_usage, last_reset_at, created_at,
 		       provider_id, provider_config, budget_limit, reset_period
 		FROM app_keys WHERE key_hash = ?
 	`, hash)
@@ -113,7 +118,7 @@ func (r *SQLiteKeyRepository) GetByHash(ctx context.Context, hash string) (*doma
 
 func (r *SQLiteKeyRepository) List(ctx context.Context) ([]*domain.Key, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, name, key_hash, prefix, expires_at, budget_usage, last_reset_at, created_at,
+		SELECT id, name, key_hash, prefix, expires_at, auto_renew, budget_usage, last_reset_at, created_at,
 		       provider_id, provider_config, budget_limit, reset_period
 		FROM app_keys ORDER BY created_at DESC
 	`)
@@ -163,11 +168,16 @@ func (r *SQLiteKeyRepository) Update(ctx context.Context, k *domain.Key) error {
 		resetPeriod = k.Configuration.ResetPeriod
 	}
 
+	autoRenew := 0
+	if k.AutoRenew {
+		autoRenew = 1
+	}
+
 	_, err = tx.ExecContext(ctx, `
 		UPDATE app_keys 
-		SET name = ?, provider_id = ?, provider_config = ?, budget_limit = ?, reset_period = ?
+		SET name = ?, auto_renew = ?, provider_id = ?, provider_config = ?, budget_limit = ?, reset_period = ?
 		WHERE id = ?
-	`, k.Name, providerID, providerConfig, budgetLimit, resetPeriod, k.ID)
+	`, k.Name, autoRenew, providerID, providerConfig, budgetLimit, resetPeriod, k.ID)
 	if err != nil {
 		return err
 	}
@@ -221,6 +231,7 @@ func (r *SQLiteKeyRepository) scanKey(sc interface {
 }) (*domain.Key, error) {
 	var k domain.Key
 	var expiresAt sql.NullInt64
+	var autoRenew int
 	var lastResetAt, createdAt int64
 	var providerID string
 	var providerConfig sql.NullString
@@ -228,7 +239,7 @@ func (r *SQLiteKeyRepository) scanKey(sc interface {
 	var resetPeriod int
 
 	err := sc.Scan(
-		&k.ID, &k.Name, &k.KeyHash, &k.Prefix, &expiresAt,
+		&k.ID, &k.Name, &k.KeyHash, &k.Prefix, &expiresAt, &autoRenew,
 		&k.BudgetUsage, &lastResetAt, &createdAt,
 		&providerID, &providerConfig, &budgetLimit, &resetPeriod,
 	)
@@ -244,6 +255,7 @@ func (r *SQLiteKeyRepository) scanKey(sc interface {
 		t := time.Unix(expiresAt.Int64, 0)
 		k.ExpiresAt = &t
 	}
+	k.AutoRenew = autoRenew == 1
 	k.LastResetAt = time.Unix(lastResetAt, 0)
 	k.CreatedAt = time.Unix(createdAt, 0)
 

@@ -46,6 +46,7 @@ func migrate(db *sql.DB) error {
 		key_hash TEXT NOT NULL UNIQUE,
 		prefix TEXT NOT NULL,
 		expires_at INTEGER,
+		auto_renew INTEGER NOT NULL DEFAULT 0,
 		budget_usage REAL DEFAULT 0,
 		last_reset_at INTEGER,
 		created_at INTEGER NOT NULL,
@@ -62,8 +63,7 @@ func migrate(db *sql.DB) error {
 		app_key_id INTEGER NOT NULL REFERENCES app_keys(id) ON DELETE CASCADE,
 		middleware_id TEXT NOT NULL,
 		config TEXT,
-		priority INTEGER NOT NULL DEFAULT 0,
-		UNIQUE(app_key_id, middleware_id)
+		priority INTEGER NOT NULL DEFAULT 0
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_middlewares_key ON app_key_middlewares(app_key_id);
@@ -81,6 +81,7 @@ func migrate(db *sql.DB) error {
 		"ALTER TABLE app_keys ADD COLUMN provider_config TEXT",
 		"ALTER TABLE app_keys ADD COLUMN budget_limit REAL DEFAULT 0",
 		"ALTER TABLE app_keys ADD COLUMN reset_period INTEGER DEFAULT 0",
+		"ALTER TABLE app_keys ADD COLUMN auto_renew INTEGER NOT NULL DEFAULT 0",
 	}
 
 	for _, stmt := range alterStatements {

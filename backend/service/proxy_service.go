@@ -27,7 +27,15 @@ func (s *ProxyService) Execute(req *domain.Request) (*domain.Response, error) {
 
 	// 1. Core Validation
 	if req.Key.IsExpired() {
-		return nil, fmt.Errorf("key has expired")
+		if req.Key.AutoRenew {
+			if err := s.keyService.RenewKey(req.Context, req.Key); err != nil {
+				fmt.Printf("WARN: failed to auto-renew key: %v\n", err)
+				return nil, fmt.Errorf("key has expired and auto-renew failed")
+			}
+			fmt.Printf("INFO: key %s auto-renewed\n", req.Key.Prefix)
+		} else {
+			return nil, fmt.Errorf("key has expired")
+		}
 	}
 
 	config := req.Key.Configuration

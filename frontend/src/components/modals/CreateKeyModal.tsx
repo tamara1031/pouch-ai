@@ -14,10 +14,11 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos, p
     const [name, setName] = useState("");
     const [providerId, setProviderId] = useState("openai");
     const [providerConfig, setProviderConfig] = useState<Record<string, any>>({});
+    const [autoRenew, setAutoRenew] = useState(false);
     const [middlewares, setMiddlewares] = useState<PluginConfig[]>([]);
     const [expiresAtDays, setExpiresAtDays] = useState("0");
     const [budgetLimit, setBudgetLimit] = useState("5.00");
-    const [resetPeriod, setResetPeriod] = useState("2592000"); // 30 days default
+    const [resetPeriod, setResetPeriod] = useState("2592000");
     const [loading, setLoading] = useState(false);
 
     // Initialize provider config when provider changes
@@ -69,6 +70,7 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos, p
                     name,
                     provider: { id: providerId, config: providerConfig },
                     middlewares: middlewares,
+                    auto_renew: autoRenew,
                     budget_limit: parseFloat(budgetLimit) || 0,
                     reset_period: parseInt(resetPeriod) || 0,
                     expires_at,
@@ -80,6 +82,7 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos, p
                 onSuccess(data.key);
                 setName("");
                 setExpiresAtDays("0");
+                setAutoRenew(false);
                 setProviderConfig({});
                 // Reset middlewares to defaults
                 setMiddlewares(middlewareInfos
@@ -104,49 +107,60 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos, p
     return (
         <>
             <input type="checkbox" id="create-key-modal" class="modal-toggle" ref={modalRef} />
-            <div class="modal">
-                <div class="modal-box w-11/12 max-w-2xl bg-base-100 border border-white/5 rounded-2xl shadow-2xl p-0 overflow-visible">
-                    <div class="p-6 border-b border-white/5 flex justify-between items-center bg-base-200/50 rounded-t-2xl">
+            <div class="modal modal-bottom sm:modal-middle">
+                <div class="modal-box w-full max-w-3xl bg-base-100 border border-white/10 rounded-2xl shadow-2xl p-0 max-h-[90vh] flex flex-col">
+                    {/* Header - Fixed */}
+                    <div class="p-6 border-b border-white/10 flex justify-between items-center bg-base-200/30 rounded-t-2xl shrink-0">
                         <div>
-                            <h3 class="font-bold text-xl text-white tracking-tight">Generate API Key</h3>
-                            <p class="text-xs text-white/40 mt-1">Configure your key and plugins.</p>
+                            <h3 class="font-bold text-lg text-white">Create API Key</h3>
+                            <p class="text-sm text-white/40 mt-0.5">Configure your key settings and middleware.</p>
                         </div>
-                        <label for="create-key-modal" class="btn btn-sm btn-circle btn-ghost">✕</label>
+                        <label for="create-key-modal" class="btn btn-sm btn-circle btn-ghost text-white/40 hover:text-white">✕</label>
                     </div>
 
-                    <form class="p-6 flex flex-col gap-6" onSubmit={handleCreate}>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Scrollable Content */}
+                    <form class="flex-1 overflow-y-auto p-6 space-y-6" onSubmit={handleCreate}>
+                        {/* Basic Settings */}
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div class="form-control">
-                                <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Name</span></label>
-                                <input type="text" value={name} onInput={(e) => setName(e.currentTarget.value)} placeholder="e.g. My App" class="input input-bordered w-full bg-white/5 border-white/5 rounded-xl font-bold" required />
+                                <label class="label pb-1"><span class="label-text text-xs text-white/50 font-medium">Name</span></label>
+                                <input type="text" value={name} onInput={(e) => setName(e.currentTarget.value)} placeholder="e.g. My App" class="input input-bordered w-full bg-base-200/50 border-white/10 rounded-lg h-10" required />
                             </div>
                             <div class="form-control">
-                                <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Provider</span></label>
-                                <select value={providerId} onChange={(e) => handleProviderChange(e.currentTarget.value)} class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl text-sm">
+                                <label class="label pb-1"><span class="label-text text-xs text-white/50 font-medium">Provider</span></label>
+                                <select value={providerId} onChange={(e) => handleProviderChange(e.currentTarget.value)} class="select select-bordered w-full bg-base-200/50 border-white/10 rounded-lg h-10">
                                     {providerInfos.map(p => (
                                         <option key={p.id} value={p.id}>{p.id.charAt(0).toUpperCase() + p.id.slice(1)}</option>
                                     ))}
                                 </select>
                             </div>
                             <div class="form-control">
-                                <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Expiration</span></label>
-                                <select value={expiresAtDays} onChange={(e) => setExpiresAtDays(e.currentTarget.value)} class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl text-sm">
-                                    <option value="0">Indefinite</option>
+                                <label class="label pb-1"><span class="label-text text-xs text-white/50 font-medium">Expiration</span></label>
+                                <select value={expiresAtDays} onChange={(e) => setExpiresAtDays(e.currentTarget.value)} class="select select-bordered w-full bg-base-200/50 border-white/10 rounded-lg h-10">
+                                    <option value="0">No Expiration</option>
                                     <option value="7">1 Week</option>
                                     <option value="30">1 Month</option>
                                     <option value="90">3 Months</option>
                                 </select>
                             </div>
                             <div class="form-control">
-                                <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Budget Limit (USD)</span></label>
-                                <input type="number" step="0.01" value={budgetLimit} onInput={(e) => setBudgetLimit(e.currentTarget.value)} class="input input-bordered w-full bg-white/5 border-white/5 rounded-xl font-bold" />
+                                <label class="label pb-1"><span class="label-text text-xs text-white/50 font-medium">Budget Limit (USD)</span></label>
+                                <input type="number" step="0.01" value={budgetLimit} onInput={(e) => setBudgetLimit(e.currentTarget.value)} class="input input-bordered w-full bg-base-200/50 border-white/10 rounded-lg h-10" />
                             </div>
                             <div class="form-control">
-                                <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Reset Period (Seconds)</span></label>
-                                <input type="number" value={resetPeriod} onInput={(e) => setResetPeriod(e.currentTarget.value)} class="input input-bordered w-full bg-white/5 border-white/5 rounded-xl font-bold" />
+                                <label class="label pb-1 cursor-pointer flex justify-start gap-3">
+                                    <input type="checkbox" checked={autoRenew} onChange={(e) => setAutoRenew(e.currentTarget.checked)} class="checkbox checkbox-primary checkbox-sm rounded-md" />
+                                    <span class="label-text text-sm font-medium text-white/70">Auto-Renew</span>
+                                </label>
+                                <div class="text-[10px] text-white/30 pl-8">Automatically reset budget and extend expiration</div>
+                            </div>
+                            <div class="form-control sm:col-span-2">
+                                <label class="label pb-1"><span class="label-text text-xs text-white/50 font-medium">Reset Period (Seconds)</span></label>
+                                <input type="number" value={resetPeriod} onInput={(e) => setResetPeriod(e.currentTarget.value)} placeholder="2592000 = 30 days" class="input input-bordered w-full bg-base-200/50 border-white/10 rounded-lg h-10" />
                             </div>
                         </div>
 
+                        {/* Provider Config */}
                         <ProviderConfigSection
                             providerId={providerId}
                             providerInfos={providerInfos}
@@ -154,20 +168,23 @@ export default function CreateKeyModal({ modalRef, onSuccess, middlewareInfos, p
                             onConfigUpdate={(key, val) => setProviderConfig(prev => ({ ...prev, [key]: val }))}
                         />
 
+                        {/* Middlewares */}
                         <MiddlewareComposition
                             middlewares={middlewares}
                             middlewareInfos={middlewareInfos}
                             setMiddlewares={setMiddlewares}
                         />
 
-                        <div class="flex justify-end gap-3 pt-6 border-t border-white/5">
-                            <label for="create-key-modal" class="btn btn-ghost rounded-xl text-white/40 font-bold uppercase tracking-widest text-[10px]">Cancel</label>
-                            <button type="submit" class="btn btn-primary px-10 rounded-xl font-bold uppercase tracking-widest text-[11px] h-11 shadow-lg shadow-primary/20" disabled={loading}>
-                                {loading ? "Generating..." : "Generate Key"}
+                        {/* Footer - Fixed */}
+                        <div class="flex justify-end gap-3 pt-4 border-t border-white/10">
+                            <label for="create-key-modal" class="btn btn-ghost rounded-lg text-white/50 hover:text-white">Cancel</label>
+                            <button type="submit" class="btn btn-primary px-8 rounded-lg font-medium" disabled={loading}>
+                                {loading ? "Creating..." : "Create Key"}
                             </button>
                         </div>
                     </form>
                 </div>
+                <label class="modal-backdrop" for="create-key-modal">Close</label>
             </div>
         </>
     );
