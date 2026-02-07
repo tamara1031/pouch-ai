@@ -74,5 +74,18 @@ func migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
+	// Migrate existing tables that may lack new columns
+	// SQLite doesn't support IF NOT EXISTS for ALTER TABLE, so we ignore errors
+	alterStatements := []string{
+		"ALTER TABLE app_keys ADD COLUMN provider_id TEXT NOT NULL DEFAULT 'openai'",
+		"ALTER TABLE app_keys ADD COLUMN provider_config TEXT",
+		"ALTER TABLE app_keys ADD COLUMN budget_limit REAL DEFAULT 0",
+		"ALTER TABLE app_keys ADD COLUMN reset_period INTEGER DEFAULT 0",
+	}
+
+	for _, stmt := range alterStatements {
+		_, _ = db.Exec(stmt) // Ignore errors (column may already exist)
+	}
+
 	return nil
 }

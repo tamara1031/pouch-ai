@@ -104,6 +104,7 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	apiGroup.DELETE("/config/app-keys/:id", keyHandler.DeleteKey)
 	apiGroup.GET("/config/providers", keyHandler.ListProviders)
 	apiGroup.GET("/config/providers/usage", keyHandler.GetProviderUsage)
+	apiGroup.GET("/config/middlewares", keyHandler.ListMiddlewares)
 
 	// UI
 	e.GET("/*", echo.WrapHandler(http.FileServer(http.FS(assets))))
