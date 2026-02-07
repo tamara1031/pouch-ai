@@ -20,10 +20,21 @@ type MockRepository struct{}
 
 func (m *MockRepository) Save(ctx context.Context, k *domain.Key) error { return nil }
 func (m *MockRepository) GetByID(ctx context.Context, id domain.ID) (*domain.Key, error) {
-	return nil, nil
+	return &domain.Key{
+		ID:            id,
+		BudgetUsage:   0,
+		LastResetAt:   time.Now(),
+		Configuration: &domain.KeyConfiguration{},
+	}, nil
 }
 func (m *MockRepository) GetByHash(ctx context.Context, hash string) (*domain.Key, error) {
-	return nil, nil
+	return &domain.Key{
+		ID:            1,
+		KeyHash:       hash,
+		BudgetUsage:   0,
+		LastResetAt:   time.Now(),
+		Configuration: &domain.KeyConfiguration{},
+	}, nil
 }
 func (m *MockRepository) List(ctx context.Context) ([]*domain.Key, error) { return nil, nil }
 func (m *MockRepository) Update(ctx context.Context, k *domain.Key) error { return nil }
@@ -56,8 +67,8 @@ func (p *MockProvider) EstimateUsage(model domain.Model, requestBody []byte) (*d
 func (p *MockProvider) ParseOutputUsage(model domain.Model, responseBody []byte, isStream bool) (int, error) {
 	return 0, nil
 }
-func (p *MockProvider) ProcessStreamChunk(chunk []byte) (string, error) {
-	return "", nil
+func (p *MockProvider) ParseStreamChunk(model domain.Model, chunk []byte) (string, int, *domain.Usage, error) {
+	return "", 0, nil, nil
 }
 func (p *MockProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
 	return "", false, nil

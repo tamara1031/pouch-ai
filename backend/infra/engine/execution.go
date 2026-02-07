@@ -51,6 +51,12 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 			inputCost = inputUsage.TotalCost
 		}
 		outputCost := float64(outputTokens) / 1000.0 * pricing.Output
+		totalCost := inputCost + outputCost
+
+		// Commit usage for non-streaming
+		if req.Committer != nil && req.Key != nil {
+			_ = req.Committer.CommitUsage(req.Context, req.Key.ID, req.ReservedCost, totalCost)
+		}
 
 		return &domain.Response{
 			StatusCode:   resp.StatusCode,
@@ -58,7 +64,7 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 			Body:         io.NopCloser(bytes.NewBuffer(body)),
 			PromptTokens: inputUsage.InputTokens,
 			OutputTokens: outputTokens,
-			TotalCost:    inputCost + outputCost,
+			TotalCost:    totalCost,
 		}, nil
 	}
 
@@ -69,19 +75,11 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 		inputCost = inputUsage.TotalCost
 	}
 
-	// We wrap the body to count tokens and update usage when it's closed.
-	var repo domain.Repository
-	var keyID domain.ID
-	if req.Key != nil {
-		repo = h.repo
-		keyID = req.Key.ID
-	}
-
 	// Create a wrapper that will update the database on Close()
 	return &domain.Response{
 		StatusCode:   resp.StatusCode,
 		Header:       resp.Header,
-		Body:         util.NewCountingReader(resp.Body, req.Provider, req.Model, repo, keyID, req.Context),
+		Body:         util.NewCountingReader(resp.Body, req.Provider, req.Model, req.Committer, req.Key.ID, req.ReservedCost, req.Context),
 		PromptTokens: inputUsage.InputTokens,
 		TotalCost:    inputCost,
 	}, nil

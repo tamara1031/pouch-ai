@@ -42,9 +42,14 @@ func (r *streamingReader) Read(p []byte) (n int, err error) {
 			}
 
 			line := r.pending[:idx+1]
-			content, _ := r.provider.ProcessStreamChunk(line)
+			content, tokens, usage, _ := r.provider.ParseStreamChunk(r.model, line)
 			if content != "" {
 				r.accumulatedText.WriteString(content)
+			}
+			if usage != nil {
+				r.UsageTokenCount = usage.OutputTokens
+			} else {
+				r.UsageTokenCount += tokens
 			}
 
 			// Slice off the processed line.

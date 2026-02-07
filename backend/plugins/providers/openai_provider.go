@@ -121,6 +121,17 @@ func (p *OpenAIProvider) CountTokens(model domain.Model, text string) (int, erro
 }
 
 func (p *OpenAIProvider) PrepareHTTPRequest(ctx context.Context, model domain.Model, body []byte) (*http.Request, error) {
+	// Inject stream_options: {include_usage: true} if streaming
+	var reqMap map[string]any
+	if err := json.Unmarshal(body, &reqMap); err == nil {
+		if stream, ok := reqMap["stream"].(bool); stream && ok {
+			if _, ok := reqMap["stream_options"]; !ok {
+				reqMap["stream_options"] = map[string]any{"include_usage": true}
+				body, _ = json.Marshal(reqMap)
+			}
+		}
+	}
+
 	url := p.baseURL + "/chat/completions"
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
 	if err != nil {
@@ -178,44 +189,69 @@ func (p *OpenAIProvider) ParseOutputUsage(model domain.Model, responseBody []byt
 			return resp.Usage.CompletionTokens, nil
 		}
 	} else {
-		var fullContent strings.Builder
+		totalTokens := 0
 		lines := strings.Split(respStr, "\n")
 		for _, line := range lines {
-			content, err := p.ProcessStreamChunk([]byte(line))
+			_, tokens, usage, err := p.ParseStreamChunk(model, []byte(line))
 			if err == nil {
-				fullContent.WriteString(content)
+				if usage != nil {
+					return usage.OutputTokens, nil
+				}
+				totalTokens += tokens
 			}
 		}
-		finalText := fullContent.String()
-		if len(finalText) > 0 {
-			return p.CountTokens(model, finalText)
-		}
+		return totalTokens, nil
 	}
 
 	// Fallback
 	return len(respStr) / 4, nil
 }
 
-func (p *OpenAIProvider) ProcessStreamChunk(chunk []byte) (string, error) {
+func (p *OpenAIProvider) ParseStreamChunk(model domain.Model, chunk []byte) (string, int, *domain.Usage, error) {
 	chunk = bytes.TrimSpace(chunk)
 	if !bytes.HasPrefix(chunk, []byte("data: ")) || bytes.HasSuffix(chunk, []byte("[DONE]")) {
-		return "", nil
+		return "", 0, nil, nil
 	}
 	dataBytes := bytes.TrimPrefix(chunk, []byte("data: "))
+
 	var streamChunk struct {
 		Choices []struct {
 			Delta struct {
 				Content string `json:"content"`
 			} `json:"delta"`
 		} `json:"choices"`
+		Usage *struct {
+			PromptTokens     int `json:"prompt_tokens"`
+			CompletionTokens int `json:"completion_tokens"`
+			TotalTokens      int `json:"total_tokens"`
+		} `json:"usage"`
 	}
+
 	if err := json.Unmarshal(dataBytes, &streamChunk); err != nil {
-		return "", err
+		return "", 0, nil, err
 	}
+
+	content := ""
 	if len(streamChunk.Choices) > 0 {
-		return streamChunk.Choices[0].Delta.Content, nil
+		content = streamChunk.Choices[0].Delta.Content
 	}
-	return "", nil
+
+	var usage *domain.Usage
+	if streamChunk.Usage != nil {
+		pricing, _ := p.GetPricing(model)
+		usage = &domain.Usage{
+			InputTokens:  streamChunk.Usage.PromptTokens,
+			OutputTokens: streamChunk.Usage.CompletionTokens,
+			TotalCost:    (float64(streamChunk.Usage.PromptTokens) / 1000.0 * pricing.Input) + (float64(streamChunk.Usage.CompletionTokens) / 1000.0 * pricing.Output),
+		}
+	}
+
+	tokens := 0
+	if content != "" {
+		tokens, _ = p.CountTokens(model, content)
+	}
+
+	return content, tokens, usage, nil
 }
 
 func (p *OpenAIProvider) ParseRequest(body []byte) (domain.Model, bool, error) {

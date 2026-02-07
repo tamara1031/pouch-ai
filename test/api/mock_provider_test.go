@@ -20,14 +20,15 @@ func TestMockProvider_Integration(t *testing.T) {
 	// 1. Setup Dependencies
 	registry := domain.NewProviderRegistry()
 	mwRegistry := domain.NewMiddlewareRegistry()
-	keyService := service.NewKeyService(nil, registry, mwRegistry)
+	repo := &MockRepository{}
+	keyService := service.NewKeyService(repo, registry, mwRegistry)
 
 	// Register Mock Provider
 	mockProv := providers.NewMockProvider()
 	registry.Register(mockProv)
 
 	// Service
-	executionHandler := engine.NewExecutionHandler(nil)
+	executionHandler := engine.NewExecutionHandler(repo)
 
 	proxyService := service.NewProxyService(
 		executionHandler,

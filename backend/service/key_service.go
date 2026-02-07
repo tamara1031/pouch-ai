@@ -249,6 +249,59 @@ func (s *KeyService) IncrementUsage(ctx context.Context, key *domain.Key, amount
 	return nil
 }
 
+func (s *KeyService) ReserveUsage(ctx context.Context, keyID domain.ID, amount float64) error {
+	k, err := s.repo.GetByID(ctx, keyID)
+	if err != nil {
+		return err
+	}
+	if k == nil {
+		return fmt.Errorf("key not found")
+	}
+
+	if k.Configuration != nil && k.Configuration.BudgetLimit > 0 {
+		if k.BudgetUsage+amount > k.Configuration.BudgetLimit {
+			return fmt.Errorf("budget limit exceeded (limit: $%.2f, current+reservation: $%.2f)", k.Configuration.BudgetLimit, k.BudgetUsage+amount)
+		}
+	}
+
+	if err := s.repo.IncrementUsage(ctx, keyID, amount); err != nil {
+		return err
+	}
+
+	s.cacheMu.Lock()
+	for _, entry := range s.cache {
+		if entry.key.ID == keyID {
+			entry.key.BudgetUsage += amount
+			break
+		}
+	}
+	s.cacheMu.Unlock()
+
+	return nil
+}
+
+func (s *KeyService) CommitUsage(ctx context.Context, keyID domain.ID, reserved, actual float64) error {
+	diff := actual - reserved
+	if diff == 0 {
+		return nil
+	}
+
+	if err := s.repo.IncrementUsage(ctx, keyID, diff); err != nil {
+		return err
+	}
+
+	s.cacheMu.Lock()
+	for _, entry := range s.cache {
+		if entry.key.ID == keyID {
+			entry.key.BudgetUsage += diff
+			break
+		}
+	}
+	s.cacheMu.Unlock()
+
+	return nil
+}
+
 func (s *KeyService) GetProviderUsage(ctx context.Context) (map[string]float64, error) {
 	providers := s.registry.List()
 	usage := make(map[string]float64, len(providers))

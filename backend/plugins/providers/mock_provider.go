@@ -117,51 +117,25 @@ func (p *MockProvider) ParseOutputUsage(model domain.Model, responseBody []byte,
 		return len(responseBody) / 4, nil
 	}
 
-	// For stream, we count tokens from the accumulated text
-	// The implementation in execution.go aggregates the content
-	// Here we just need to parse chunks if we were doing it manually,
-	// but the caller (ExecutionHandler) handles buffering and calling ParseOutputUsage with the full text?
-	// Wait, ExecutionHandler's streaming logic (step 4) returns a CountingReader.
-	// The CountingReader calls provider.EstimateUsage (input) but for output it relies on...
-	// Ah, CountingReader logic is in internal/infra/counting_reader.go. Let's assume it works like OpenAI's.
-
-	// Actually, looking at OpenAI implementation:
-	/*
-		func (p *OpenAIProvider) ParseOutputUsage(model domain.Model, responseBody []byte, isStream bool) (int, error) {
-			// ...
-			if isStream {
-				var fullContent strings.Builder
-				lines := strings.Split(respStr, "\n")
-				for _, line := range lines {
-					content, err := p.ProcessStreamChunk([]byte(line))
-					if err == nil {
-						fullContent.WriteString(content)
-					}
-				}
-				finalText := fullContent.String()
-				return p.CountTokens(model, finalText)
-			}
-			// ...
-		}
-	*/
-	// So we should do the same.
-
 	respStr := string(responseBody)
-	var fullContent strings.Builder
+	totalTokens := 0
 	lines := strings.Split(respStr, "\n")
 	for _, line := range lines {
-		content, err := p.ProcessStreamChunk([]byte(line))
+		_, tokens, usage, err := p.ParseStreamChunk(model, []byte(line))
 		if err == nil {
-			fullContent.WriteString(content)
+			if usage != nil {
+				return usage.OutputTokens, nil
+			}
+			totalTokens += tokens
 		}
 	}
-	return len(fullContent.String()) / 4, nil
+	return totalTokens, nil
 }
 
-func (p *MockProvider) ProcessStreamChunk(chunk []byte) (string, error) {
+func (p *MockProvider) ParseStreamChunk(model domain.Model, chunk []byte) (string, int, *domain.Usage, error) {
 	chunk = bytes.TrimSpace(chunk)
 	if !bytes.HasPrefix(chunk, []byte("data: ")) || bytes.HasSuffix(chunk, []byte("[DONE]")) {
-		return "", nil
+		return "", 0, nil, nil
 	}
 	dataBytes := bytes.TrimPrefix(chunk, []byte("data: "))
 	var streamChunk struct {
@@ -170,14 +144,30 @@ func (p *MockProvider) ProcessStreamChunk(chunk []byte) (string, error) {
 				Content string `json:"content"`
 			} `json:"delta"`
 		} `json:"choices"`
+		Usage *struct {
+			PromptTokens     int `json:"prompt_tokens"`
+			CompletionTokens int `json:"completion_tokens"`
+		} `json:"usage"`
 	}
 	if err := json.Unmarshal(dataBytes, &streamChunk); err != nil {
-		return "", err
+		return "", 0, nil, err
 	}
+
+	content := ""
 	if len(streamChunk.Choices) > 0 {
-		return streamChunk.Choices[0].Delta.Content, nil
+		content = streamChunk.Choices[0].Delta.Content
 	}
-	return "", nil
+
+	var usage *domain.Usage
+	if streamChunk.Usage != nil {
+		usage = &domain.Usage{
+			InputTokens:  streamChunk.Usage.PromptTokens,
+			OutputTokens: streamChunk.Usage.CompletionTokens,
+			TotalCost:    0,
+		}
+	}
+
+	return content, len(content) / 4, usage, nil
 }
 
 func (p *MockProvider) ParseRequest(body []byte) (domain.Model, bool, error) {

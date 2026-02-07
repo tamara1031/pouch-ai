@@ -54,12 +54,19 @@ func (s *ProxyService) Execute(req *domain.Request) (*domain.Response, error) {
 		}
 	}
 
-	// 3. Core Budget Enforcement
-	if config.BudgetLimit > 0 {
-		if req.Key.BudgetUsage >= config.BudgetLimit {
-			return nil, fmt.Errorf("budget limit exceeded (limit: $%.2f, used: $%.2f)", config.BudgetLimit, req.Key.BudgetUsage)
-		}
+	// 3. Core Budget Enforcement (Atomic Reservation)
+	estimatedUsage, _ := req.Provider.EstimateUsage(req.Model, req.RawBody)
+	reservedCost := 0.0
+	if estimatedUsage != nil {
+		reservedCost = estimatedUsage.TotalCost
 	}
+
+	if err := s.keyService.ReserveUsage(req.Context, req.Key.ID, reservedCost); err != nil {
+		return nil, err
+	}
+
+	req.ReservedCost = reservedCost
+	req.Committer = s.keyService
 
 	// 4. Plugin Middlewares
 	var mws []domain.Middleware
@@ -74,11 +81,6 @@ func (s *ProxyService) Execute(req *domain.Request) (*domain.Response, error) {
 
 	chain := domain.NewChain(s.finalHandler, mws...)
 	resp, err := chain.Handle(req)
-
-	// 5. Core Usage Tracking
-	if err == nil && resp != nil && resp.TotalCost > 0 {
-		_ = s.keyService.IncrementUsage(req.Context, req.Key, resp.TotalCost)
-	}
 
 	return resp, err
 }

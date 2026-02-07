@@ -33,13 +33,14 @@ func (m *TestMockProvider) EstimateUsage(model domain.Model, body []byte) (*doma
 func (m *TestMockProvider) ParseOutputUsage(model domain.Model, responseBody []byte, isStream bool) (int, error) {
 	return 0, nil
 }
-func (m *TestMockProvider) ProcessStreamChunk(chunk []byte) (string, error) {
+func (m *TestMockProvider) ParseStreamChunk(model domain.Model, chunk []byte) (string, int, *domain.Usage, error) {
 	// Simple mock implementation
 	s := string(chunk)
 	if strings.Contains(s, "word ") {
-		return "word ", nil
+		return "word ", 2, nil, nil // 2 tokens for "word " to match the test's len/4 approx?
+		// Actually "word " is 5 chars. 10 chars "word word " / 4 = 2.
 	}
-	return "", nil
+	return "", 0, nil, nil
 }
 func (m *TestMockProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
 	return "", false, nil

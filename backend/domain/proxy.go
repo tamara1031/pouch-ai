@@ -6,13 +6,19 @@ import (
 	"net/http"
 )
 
+type UsageCommitter interface {
+	CommitUsage(ctx context.Context, keyID ID, reserved, actual float64) error
+}
+
 type Request struct {
-	Context  context.Context
-	Key      *Key
-	Provider Provider
-	Model    Model
-	RawBody  []byte
-	IsStream bool
+	Context      context.Context
+	Key          *Key
+	Provider     Provider
+	Model        Model
+	RawBody      []byte
+	IsStream     bool
+	ReservedCost float64
+	Committer    UsageCommitter
 }
 
 type Response struct {

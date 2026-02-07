@@ -120,8 +120,8 @@ func (d *DummyProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
 }
 func (d *DummyProvider) GetUsage(ctx context.Context) (float64, error) { return 0, nil }
 
-func (d *DummyProvider) ProcessStreamChunk(chunk []byte) (string, error) {
-	return "", nil
+func (d *DummyProvider) ParseStreamChunk(model domain.Model, chunk []byte) (string, int, *domain.Usage, error) {
+	return "", 0, nil, nil
 }
 
 func BenchmarkVerifyKey(b *testing.B) {
