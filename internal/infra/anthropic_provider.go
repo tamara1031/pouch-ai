@@ -168,30 +168,78 @@ func (p *AnthropicProvider) EstimateUsage(model domain.Model, body []byte) (*dom
 }
 
 func (p *AnthropicProvider) ParseOutputUsage(model domain.Model, responseBody []byte, isStream bool) (int, error) {
-	// IMPORTANT: ExecutionHandler calls this with the RAW Provider Response (if not streaming).
-	// But if we TransformResponse, ExecutionHandler reads that.
-	// Wait, in execution.go:
-	// 3. For non-streaming...
-	//    body, err := io.ReadAll(resp.Body)
-	//    ... ParseOutputUsage(..., body, false)
-	//    ... TransformResponse(bytes.NewBuffer(body))
-	// So ParseOutputUsage receives the ANTHROPIC response body.
-
-	if isStream {
-		// Not used by ExecutionHandler currently for streaming.
+	if !isStream {
+		var resp struct {
+			Usage struct {
+				InputTokens  int `json:"input_tokens"`
+				OutputTokens int `json:"output_tokens"`
+			} `json:"usage"`
+		}
+		if err := json.Unmarshal(responseBody, &resp); err == nil {
+			return resp.Usage.OutputTokens, nil
+		}
 		return 0, nil
 	}
 
-	var resp struct {
-		Usage struct {
-			InputTokens  int `json:"input_tokens"`
-			OutputTokens int `json:"output_tokens"`
-		} `json:"usage"`
+	// Streaming logic
+	totalOutputTokens := 0
+	lines := bytes.Split(responseBody, []byte("\n"))
+	for _, line := range lines {
+		line = bytes.TrimSpace(line)
+		if !bytes.HasPrefix(line, []byte("data: ")) {
+			continue
+		}
+		data := bytes.TrimPrefix(line, []byte("data: "))
+
+		// Optimization: Check if "usage" is in the line before unmarshalling
+		if !bytes.Contains(data, []byte("usage")) {
+			continue
+		}
+
+		var evt struct {
+			Usage struct {
+				OutputTokens int `json:"output_tokens"`
+			} `json:"usage"`
+			Message struct {
+				Usage struct {
+					OutputTokens int `json:"output_tokens"`
+				} `json:"usage"`
+			} `json:"message"`
+		}
+		if err := json.Unmarshal(data, &evt); err == nil {
+			totalOutputTokens += evt.Usage.OutputTokens
+			totalOutputTokens += evt.Message.Usage.OutputTokens
+		}
 	}
-	if err := json.Unmarshal(responseBody, &resp); err == nil {
-		return resp.Usage.OutputTokens, nil
+
+	if totalOutputTokens > 0 {
+		return totalOutputTokens, nil
 	}
+
+	// Fallback if no usage found (approximate from content?)
+	// Not easy to reconstruct content here easily without parsing everything.
+	// But usually usage is provided.
 	return 0, nil
+}
+
+func (p *AnthropicProvider) ProcessStreamChunk(chunk []byte) (string, error) {
+	chunk = bytes.TrimSpace(chunk)
+	if !bytes.HasPrefix(chunk, []byte("data: ")) {
+		return "", nil
+	}
+	data := bytes.TrimPrefix(chunk, []byte("data: "))
+	var evt struct {
+		Type string `json:"type"`
+		Delta struct {
+			Text string `json:"text"`
+		} `json:"delta"`
+	}
+	if err := json.Unmarshal(data, &evt); err == nil {
+		if evt.Type == "content_block_delta" {
+			return evt.Delta.Text, nil
+		}
+	}
+	return "", nil
 }
 
 func (p *AnthropicProvider) TransformResponse(body io.Reader, isStream bool) (io.Reader, error) {

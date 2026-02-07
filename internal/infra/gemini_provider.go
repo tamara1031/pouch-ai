@@ -176,19 +176,76 @@ func (p *GeminiProvider) EstimateUsage(model domain.Model, body []byte) (*domain
 }
 
 func (p *GeminiProvider) ParseOutputUsage(model domain.Model, responseBody []byte, isStream bool) (int, error) {
-	if isStream {
+	if !isStream {
+		var resp struct {
+			UsageMetadata struct {
+				CandidatesTokenCount int `json:"candidatesTokenCount"`
+			} `json:"usageMetadata"`
+		}
+		if err := json.Unmarshal(responseBody, &resp); err == nil {
+			return resp.UsageMetadata.CandidatesTokenCount, nil
+		}
 		return 0, nil
 	}
 
-	var resp struct {
-		UsageMetadata struct {
-			CandidatesTokenCount int `json:"candidatesTokenCount"`
-		} `json:"usageMetadata"`
+	// Streaming logic
+	maxTokens := 0
+	lines := bytes.Split(responseBody, []byte("\n"))
+	for _, line := range lines {
+		line = bytes.TrimSpace(line)
+		if !bytes.HasPrefix(line, []byte("data: ")) {
+			continue
+		}
+		data := bytes.TrimPrefix(line, []byte("data: "))
+
+		if !bytes.Contains(data, []byte("usageMetadata")) {
+			continue
+		}
+
+		var evt struct {
+			UsageMetadata struct {
+				CandidatesTokenCount int `json:"candidatesTokenCount"`
+			} `json:"usageMetadata"`
+		}
+		if err := json.Unmarshal(data, &evt); err == nil {
+			if evt.UsageMetadata.CandidatesTokenCount > maxTokens {
+				maxTokens = evt.UsageMetadata.CandidatesTokenCount
+			}
+		}
 	}
-	if err := json.Unmarshal(responseBody, &resp); err == nil {
-		return resp.UsageMetadata.CandidatesTokenCount, nil
+
+	if maxTokens > 0 {
+		return maxTokens, nil
 	}
+
 	return 0, nil
+}
+
+func (p *GeminiProvider) ProcessStreamChunk(chunk []byte) (string, error) {
+	chunk = bytes.TrimSpace(chunk)
+	if !bytes.HasPrefix(chunk, []byte("data: ")) {
+		return "", nil
+	}
+	data := bytes.TrimPrefix(chunk, []byte("data: "))
+	var gChunk struct {
+		Candidates []struct {
+			Content struct {
+				Parts []struct {
+					Text string `json:"text"`
+				} `json:"parts"`
+			} `json:"content"`
+		} `json:"candidates"`
+	}
+	if err := json.Unmarshal(data, &gChunk); err == nil {
+		if len(gChunk.Candidates) > 0 {
+			text := ""
+			for _, part := range gChunk.Candidates[0].Content.Parts {
+				text += part.Text
+			}
+			return text, nil
+		}
+	}
+	return "", nil
 }
 
 func (p *GeminiProvider) TransformResponse(body io.Reader, isStream bool) (io.Reader, error) {
@@ -255,17 +312,20 @@ func (p *GeminiProvider) TransformResponse(body io.Reader, isStream bool) (io.Re
 				text += part.Text
 			}
 
-			oData := map[string]any{
-				"choices": []map[string]any{
-					{
-						"delta": map[string]any{
-							"content": text,
+			// Only send if there is text (avoid empty deltas from metadata updates)
+			if text != "" {
+				oData := map[string]any{
+					"choices": []map[string]any{
+						{
+							"delta": map[string]any{
+								"content": text,
+							},
 						},
 					},
-				},
+				}
+				b, _ := json.Marshal(oData)
+				return []ServerSentEvent{{Data: string(b)}}, nil
 			}
-			b, _ := json.Marshal(oData)
-			return []ServerSentEvent{{Data: string(b)}}, nil
 		}
 
 		return nil, nil

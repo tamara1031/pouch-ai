@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -16,9 +17,15 @@ type OpenAIModelPrice struct {
 	Output float64 `json:"output"`
 }
 
+type pricingEntry struct {
+	prefix string
+	price  OpenAIModelPrice
+}
+
 type OpenAIPricing struct {
-	prices map[string]OpenAIModelPrice
-	mu     sync.RWMutex
+	prices        map[string]OpenAIModelPrice
+	sortedEntries []pricingEntry
+	mu            sync.RWMutex
 }
 
 func NewOpenAIPricing() (*OpenAIPricing, error) {
@@ -26,7 +33,24 @@ func NewOpenAIPricing() (*OpenAIPricing, error) {
 	if err := json.Unmarshal(pricingJSON, &prices); err != nil {
 		return nil, fmt.Errorf("failed to parse pricing.json: %w", err)
 	}
-	return &OpenAIPricing{prices: prices}, nil
+
+	var entries []pricingEntry
+	for k, v := range prices {
+		entries = append(entries, pricingEntry{prefix: k, price: v})
+	}
+
+	// Sort by length descending, then lexicographically for stability
+	sort.Slice(entries, func(i, j int) bool {
+		if len(entries[i].prefix) != len(entries[j].prefix) {
+			return len(entries[i].prefix) > len(entries[j].prefix)
+		}
+		return entries[i].prefix < entries[j].prefix
+	})
+
+	return &OpenAIPricing{
+		prices:        prices,
+		sortedEntries: entries,
+	}, nil
 }
 
 func (p *OpenAIPricing) GetPrice(model string) (OpenAIModelPrice, error) {
@@ -37,9 +61,9 @@ func (p *OpenAIPricing) GetPrice(model string) (OpenAIModelPrice, error) {
 		return price, nil
 	}
 
-	for k, v := range p.prices {
-		if strings.HasPrefix(model, k) {
-			return v, nil
+	for _, entry := range p.sortedEntries {
+		if strings.HasPrefix(model, entry.prefix) {
+			return entry.price, nil
 		}
 	}
 

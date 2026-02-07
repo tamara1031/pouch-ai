@@ -79,6 +79,25 @@ func TestAnthropicProvider_TransformResponse(t *testing.T) {
 	}
 }
 
+func TestAnthropicProvider_ParseOutputUsage_Stream(t *testing.T) {
+	p := NewAnthropicProvider("key", &AnthropicPricing{}, &mockCounter{})
+
+	streamBody := `
+data: {"type": "message_start", "message": {"usage": {"output_tokens": 1}}}
+
+data: {"type": "content_block_delta", "delta": {"text": "Hello"}}
+
+data: {"type": "message_delta", "usage": {"output_tokens": 10}}
+`
+	usage, err := p.ParseOutputUsage("model", []byte(streamBody), true)
+	if err != nil {
+		t.Fatalf("ParseOutputUsage failed: %v", err)
+	}
+	if usage != 11 {
+		t.Errorf("expected usage 11, got %d", usage)
+	}
+}
+
 func TestGeminiProvider_PrepareHTTPRequest(t *testing.T) {
 	p := NewGeminiProvider("key", &GeminiPricing{}, &mockCounter{})
 
@@ -137,5 +156,22 @@ func TestGeminiProvider_TransformResponse(t *testing.T) {
 
 	if oResp.Choices[0].Message.Content != "Response" {
 		t.Errorf("expected content 'Response', got %s", oResp.Choices[0].Message.Content)
+	}
+}
+
+func TestGeminiProvider_ParseOutputUsage_Stream(t *testing.T) {
+	p := NewGeminiProvider("key", &GeminiPricing{}, &mockCounter{})
+
+	streamBody := `
+data: {"candidates": [], "usageMetadata": {"candidatesTokenCount": 10}}
+
+data: {"candidates": [], "usageMetadata": {"candidatesTokenCount": 25}}
+`
+	usage, err := p.ParseOutputUsage("model", []byte(streamBody), true)
+	if err != nil {
+		t.Fatalf("ParseOutputUsage failed: %v", err)
+	}
+	if usage != 25 {
+		t.Errorf("expected usage 25, got %d", usage)
 	}
 }

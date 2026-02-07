@@ -23,7 +23,7 @@ type Server struct {
 	Port int
 }
 
-func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, error) {
+func New(dataDir string, port int, targetURL string, assets fs.FS, allowedOrigins []string) (*Server, error) {
 	// 1. Init Database
 	if err := database.InitDB(dataDir); err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 	// 3. Initialize Application Services
 	keyService := service.NewKeyService(keyRepo, registry)
 
-	executionHandler := infra.NewExecutionHandler()
+	executionHandler := infra.NewExecutionHandler(keyRepo)
 	proxyService := service.NewProxyService(
 		executionHandler,
 		service_mw.NewRateLimitMiddleware(),               // Shut out request if rate limit is exceeded
@@ -93,7 +93,12 @@ func New(dataDir string, port int, targetURL string, assets fs.FS) (*Server, err
 
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
-	e.Use(middleware.CORS())
+
+	corsConfig := middleware.DefaultCORSConfig
+	if len(allowedOrigins) > 0 {
+		corsConfig.AllowOrigins = allowedOrigins
+	}
+	e.Use(middleware.CORSWithConfig(corsConfig))
 
 	// 7. Routes
 	apiGroup := e.Group("/v1")

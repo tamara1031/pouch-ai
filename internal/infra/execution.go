@@ -9,11 +9,13 @@ import (
 
 type ExecutionHandler struct {
 	client *http.Client
+	repo   domain.Repository
 }
 
-func NewExecutionHandler() *ExecutionHandler {
+func NewExecutionHandler(repo domain.Repository) *ExecutionHandler {
 	return &ExecutionHandler{
 		client: &http.Client{},
+		repo:   repo,
 	}
 }
 
@@ -88,23 +90,35 @@ func (h *ExecutionHandler) Handle(req *domain.Request) (*domain.Response, error)
 		inputCost = inputUsage.TotalCost
 	}
 
-	// Transform Response
-	transformedReader, err := req.Provider.TransformResponse(resp.Body, true)
+	// Setup CountingReader for usage tracking
+	var repo domain.Repository
+	var keyID domain.ID
+	if req.Key != nil {
+		repo = h.repo
+		keyID = req.Key.ID
+	}
+
+	// Wrap original body in CountingReader
+	// This ensures we count tokens from the raw provider stream
+	countingReader := NewCountingReader(resp.Body, req.Provider, req.Model, repo, keyID, req.Context)
+
+	// Transform Response (reading from CountingReader)
+	transformedReader, err := req.Provider.TransformResponse(countingReader, true)
 	if err != nil {
-		resp.Body.Close()
+		countingReader.Close()
 		return nil, err
 	}
 
-	// Wrap the transformed reader to ensure the original response body is closed
+	// Wrap the transformed reader to ensure the counting reader (and original body) is closed
 	wrappedBody := &readCloserWrapper{
 		Reader: transformedReader,
-		closer: resp.Body,
+		closer: countingReader,
 	}
 
 	return &domain.Response{
 		StatusCode:   resp.StatusCode,
 		Header:       resp.Header,
-		Body:         wrappedBody, // TODO: Wrap in CountingReader
+		Body:         wrappedBody,
 		PromptTokens: inputUsage.InputTokens,
 		TotalCost:    inputCost,
 	}, nil
