@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"regexp"
 	"time"
+	"unicode/utf8"
 )
 
-var keyNameRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-\s]+$`)
+var keyNameRegex = regexp.MustCompile(`^[\pL\pN_\-\s]+$`)
 
 type ValidationError struct {
 	Message string
@@ -62,7 +63,7 @@ func (k *Key) Validate() error {
 	if k.Name == "" {
 		return &ValidationError{"key name is required"}
 	}
-	if len(k.Name) > MaxKeyNameLength {
+	if utf8.RuneCountInString(k.Name) > MaxKeyNameLength {
 		return &ValidationError{fmt.Sprintf("key name is too long (max %d characters)", MaxKeyNameLength)}
 	}
 	if !keyNameRegex.MatchString(k.Name) {
