@@ -31,11 +31,7 @@
         <Badge variant={keyData.isMock ? 'warning' : 'default'}>{keyData.provider}</Badge>
       </div>
     </div>
-    <!-- 
-    <button class="icon-btn" on:click={handleEdit}>
-        <MoreHorizontal size={18} />
-    </button>
-    -->
+
   </div>
 
   <div class="key-value-section">
@@ -138,22 +134,7 @@
     line-height: 1.2;
   }
 
-/*
-  .icon-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      padding: 4px;
-      border-radius: var(--radius-sm);
-      transition: all 0.2s;
-  }
-  
-  .icon-btn:hover {
-      color: var(--text-main);
-      background: var(--color-surface-hover);
-  }
-*/
+
 
   .key-value-section {
     margin-bottom: 1.5rem;
