@@ -76,7 +76,7 @@ func TestBudgetRaceCondition(t *testing.T) {
 	registry.Register(provider)
 
 	keyService := service.NewKeyService(keyRepo, registry)
-	executionHandler := infra.NewExecutionHandler()
+	executionHandler := infra.NewExecutionHandler(keyRepo)
 
 	proxyService := service.NewProxyService(
 		executionHandler,

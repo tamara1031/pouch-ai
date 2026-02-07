@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"log"
 	"path/filepath"
+	"strings"
 
 	"pouch-ai/internal/server"
 	"pouch-ai/ui"
@@ -14,6 +15,7 @@ func main() {
 	port := flag.Int("port", 8080, "Port to listen on")
 	target := flag.String("target", "https://api.openai.com", "Target OpenAI API Base URL")
 	dataDir := flag.String("data", "./data", "Directory to store data")
+	corsOrigins := flag.String("cors-origins", "*", "Comma-separated list of allowed CORS origins")
 	flag.Parse()
 
 	// Ensure absolute path for data integrity
@@ -32,7 +34,17 @@ func main() {
 		log.Fatalf("Failed to create sub FS for UI: %v", err)
 	}
 
-	srv, err := server.New(absDataDir, *port, *target, distFS)
+	var allowedOrigins []string
+	if *corsOrigins != "" {
+		for _, o := range strings.Split(*corsOrigins, ",") {
+			trimmed := strings.TrimSpace(o)
+			if trimmed != "" {
+				allowedOrigins = append(allowedOrigins, trimmed)
+			}
+		}
+	}
+
+	srv, err := server.New(absDataDir, *port, *target, distFS, allowedOrigins)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}

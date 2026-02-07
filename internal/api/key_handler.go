@@ -3,10 +3,13 @@ package api
 import (
 	"net/http"
 	"pouch-ai/internal/service"
+	"regexp"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
 )
+
+var keyNameRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-\s]+$`)
 
 type KeyHandler struct {
 	service *service.KeyService
@@ -40,6 +43,13 @@ func (h *KeyHandler) CreateKey(c echo.Context) error {
 		return BadRequest(c, err.Error())
 	}
 
+	if len(req.Name) > 50 {
+		return BadRequest(c, "Key name is too long (max 50 characters)")
+	}
+	if !keyNameRegex.MatchString(req.Name) {
+		return BadRequest(c, "Key name contains invalid characters")
+	}
+
 	raw, _, err := h.service.CreateKey(c.Request().Context(), req.Name, req.Provider, req.ExpiresAt, req.BudgetLimit, req.BudgetPeriod, req.IsMock, req.MockConfig, req.RateLimit, req.RatePeriod)
 	if err != nil {
 		return InternalError(c, err.Error())
@@ -68,6 +78,13 @@ func (h *KeyHandler) UpdateKey(c echo.Context) error {
 	}
 	if err := c.Bind(&req); err != nil {
 		return BadRequest(c, err.Error())
+	}
+
+	if len(req.Name) > 50 {
+		return BadRequest(c, "Key name is too long (max 50 characters)")
+	}
+	if !keyNameRegex.MatchString(req.Name) {
+		return BadRequest(c, "Key name contains invalid characters")
 	}
 
 	err = h.service.UpdateKey(c.Request().Context(), id, req.Name, req.Provider, req.BudgetLimit, req.IsMock, req.MockConfig, req.RateLimit, req.RatePeriod, req.ExpiresAt)
