@@ -12,6 +12,7 @@ export type FieldType = "string" | "number" | "boolean" | "select";
 
 export interface FieldSchema {
     type: FieldType;
+    displayName?: string;
     default?: string;
     description?: string;
     options?: string[];

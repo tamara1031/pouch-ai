@@ -36,6 +36,7 @@ const (
 
 type FieldSchema struct {
 	Type        FieldType `json:"type"`
+	DisplayName string    `json:"display_name,omitempty"`
 	Default     string    `json:"default,omitempty"`
 	Description string    `json:"description,omitempty"`
 	Options     []string  `json:"options,omitempty"`

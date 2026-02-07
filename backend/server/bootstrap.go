@@ -65,12 +65,12 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	mwRegistry.Register("key_validation", service_mw.NewKeyValidationMiddleware, domain.MiddlewareSchema{})
 	mwRegistry.Register("usage_tracking", service_mw.NewUsageTrackingMiddleware(keyService), domain.MiddlewareSchema{})
 	mwRegistry.Register("rate_limit", service_mw.NewRateLimitMiddleware, domain.MiddlewareSchema{
-		"limit":  {Type: domain.FieldTypeNumber, Default: "10", Description: "Requests per period"},
-		"period": {Type: domain.FieldTypeSelect, Options: []string{"minute", "second"}, Default: "minute"},
+		"limit":  {Type: domain.FieldTypeNumber, DisplayName: "Request Limit", Default: "10", Description: "Requests per period"},
+		"period": {Type: domain.FieldTypeSelect, DisplayName: "Period", Options: []string{"minute", "second"}, Default: "minute"},
 	})
 	mwRegistry.Register("budget", service_mw.NewUsageTrackingMiddleware(keyService), domain.MiddlewareSchema{
-		"limit":  {Type: domain.FieldTypeNumber, Default: "5.00", Description: "Budget limit in USD"},
-		"period": {Type: domain.FieldTypeSelect, Options: []string{"monthly", "weekly", "daily", "none"}, Default: "monthly"},
+		"limit":  {Type: domain.FieldTypeNumber, DisplayName: "Budget Limit", Default: "5.00", Description: "Budget limit in USD"},
+		"period": {Type: domain.FieldTypeSelect, DisplayName: "Period", Options: []string{"monthly", "weekly", "daily", "none"}, Default: "monthly"},
 	})
 	mwRegistry.Register("budget_reset", service_mw.NewBudgetResetMiddleware(keyService), domain.MiddlewareSchema{})
 

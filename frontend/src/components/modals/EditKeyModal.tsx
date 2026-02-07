@@ -6,21 +6,55 @@ interface Props {
     editKey: Key | null;
 }
 
-import { MiddlewareInfo } from "../../types";
+import type { MiddlewareInfo } from "../../types";
 
 export default function EditKeyModal({ modalRef, editKey }: Props) {
     const [editProvider, setEditProvider] = useState("openai");
     const [availableMiddlewares, setAvailableMiddlewares] = useState<MiddlewareInfo[]>([]);
+    const [enabledMiddlewares, setEnabledMiddlewares] = useState<{ id: string, config: Record<string, string> }[]>([]);
 
     useEffect(() => {
         if (editKey) {
             setEditProvider(editKey.provider);
+            setEnabledMiddlewares(editKey.configuration?.middlewares || []);
         }
         fetch("/v1/config/plugins/middlewares")
             .then(res => res.json())
             .then(data => setAvailableMiddlewares(data.middlewares || []))
             .catch(err => console.error("Failed to fetch middlewares:", err));
     }, [editKey]);
+
+    const toggleMiddleware = (mwId: string) => {
+        setEnabledMiddlewares(prev => {
+            const exists = prev.find(m => m.id === mwId);
+            if (exists) return prev.filter(m => m.id !== mwId);
+            const mw = availableMiddlewares.find(m => m.id === mwId);
+            if (!mw) return prev;
+            return [...prev, {
+                id: mwId,
+                config: Object.keys(mw.schema).reduce((acc, key) => {
+                    acc[key] = mw.schema[key].default || "";
+                    return acc;
+                }, {} as Record<string, string>)
+            }];
+        });
+    };
+
+    const moveMiddleware = (index: number, direction: 'up' | 'down') => {
+        setEnabledMiddlewares(prev => {
+            const next = [...prev];
+            const newIndex = direction === 'up' ? index - 1 : index + 1;
+            if (newIndex < 0 || newIndex >= next.length) return prev;
+            [next[index], next[newIndex]] = [next[newIndex], next[index]];
+            return next;
+        });
+    };
+
+    const updateMiddlewareConfig = (mwId: string, key: string, value: string) => {
+        setEnabledMiddlewares(prev => prev.map(m =>
+            m.id === mwId ? { ...m, config: { ...m.config, [key]: value } } : m
+        ));
+    };
 
     const handleEditSubmit = async (e: Event) => {
         e.preventDefault();
@@ -30,25 +64,13 @@ export default function EditKeyModal({ modalRef, editKey }: Props) {
         const fd = new FormData(form);
         const provider = fd.get("provider") as string;
 
-        const middlewares = [];
-        for (const mw of availableMiddlewares) {
-            if (fd.get(`mw_${mw.id}`) === "on") {
-                const config: Record<string, string> = {};
-                for (const key of Object.keys(mw.schema)) {
-                    const val = fd.get(`mw_cfg_${mw.id}_${key}`) as string;
-                    if (val) config[key] = val;
-                }
-                middlewares.push({ id: mw.id, config });
-            }
-        }
-
         const payload = {
             name: fd.get("name"),
             provider: provider,
             budget_limit: parseFloat(fd.get("budget_limit") as string),
             rate_limit: parseInt(fd.get("rate_limit") as string),
             rate_period: fd.get("rate_period") || "minute",
-            middlewares: middlewares,
+            middlewares: enabledMiddlewares,
             mock_config: fd.get("mock_config"),
         };
 
@@ -110,26 +132,77 @@ export default function EditKeyModal({ modalRef, editKey }: Props) {
                                     </div>
                                 </div>
                             </div>
-                            <div class="border-t border-white/5 pt-6">
-                                <label class="label mb-4"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Plugins & Middleware</span></label>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {[
-                                        { id: "rate_limit", name: "Rate Limiting" },
-                                        { id: "budget", name: "Budget Enforcement" },
-                                        { id: "key_validation", name: "Key Validation" },
-                                        { id: "budget_reset", name: "Auto Budget Reset" },
-                                        { id: "usage_tracking", name: "Usage Tracking" }
-                                    ].map(mw => (
-                                        <div class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
-                                            <span class="text-xs font-bold text-white/80">{mw.name}</span>
-                                            <input
-                                                type="checkbox"
-                                                name={`mw_${mw.id}`}
-                                                defaultChecked={editKey.configuration?.middlewares?.some(m => m.id === mw.id) ?? true}
-                                                class="checkbox checkbox-primary checkbox-sm rounded-md"
-                                            />
+                            <div class="border-t border-white/5 pt-6 space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <label class="label p-0"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Middleware Composition</span></label>
+                                    <div class="dropdown dropdown-end">
+                                        <div tabindex={0} role="button" class="btn btn-xs btn-primary rounded-lg font-bold">Add Middleware</div>
+                                        <ul tabindex={0} class="dropdown-content z-[20] menu p-2 shadow-2xl bg-base-300 border border-white/10 rounded-xl w-52 mt-2">
+                                            {availableMiddlewares.filter(mw => !enabledMiddlewares.some(em => em.id === mw.id)).map(mw => (
+                                                <li key={mw.id}><a onClick={() => toggleMiddleware(mw.id)} class="text-xs font-bold text-white/60 hover:text-white">{mw.id.replace(/_/g, " ")}</a></li>
+                                            ))}
+                                            {availableMiddlewares.filter(mw => !enabledMiddlewares.some(em => em.id === mw.id)).length === 0 && (
+                                                <li class="disabled"><span class="text-xs italic text-white/20">All plugins added</span></li>
+                                            )}
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-3">
+                                    {enabledMiddlewares.map((emw, idx) => {
+                                        const mwInfo = availableMiddlewares.find(m => m.id === emw.id);
+                                        if (!mwInfo) return null;
+                                        return (
+                                            <div class="p-4 rounded-xl bg-white/5 border border-white/5 space-y-4 relative group" key={emw.id}>
+                                                <div class="flex items-center justify-between">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="flex flex-col gap-1">
+                                                            <button type="button" onClick={() => moveMiddleware(idx, 'up')} class={`btn btn-ghost btn-xs p-0 min-h-0 h-4 w-4 ${idx === 0 ? 'invisible' : ''}`}>▲</button>
+                                                            <button type="button" onClick={() => moveMiddleware(idx, 'down')} class={`btn btn-ghost btn-xs p-0 min-h-0 h-4 w-4 ${idx === enabledMiddlewares.length - 1 ? 'invisible' : ''}`}>▼</button>
+                                                        </div>
+                                                        <span class="text-xs font-bold text-white/80">{emw.id.replace(/_/g, " ")}</span>
+                                                    </div>
+                                                    <button type="button" onClick={() => toggleMiddleware(emw.id)} class="btn btn-ghost btn-xs h-6 w-6 btn-circle text-white/20 group-hover:text-red-400">✕</button>
+                                                </div>
+
+                                                {Object.keys(mwInfo.schema).length > 0 && (
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-6 border-l border-white/10">
+                                                        {Object.keys(mwInfo.schema).map(key => {
+                                                            const schema = mwInfo.schema[key];
+                                                            return (
+                                                                <div class="form-control" key={key}>
+                                                                    <label class="label pt-0"><span class="label-text text-[10px] text-white/40 uppercase font-semibold">{schema.displayName || key.replace(/_/g, " ")}</span></label>
+                                                                    {schema.type === "select" ? (
+                                                                        <select
+                                                                            class="select select-bordered select-xs bg-white/5 border-white/5 rounded-lg text-[10px]"
+                                                                            value={emw.config[key]}
+                                                                            onChange={(e) => updateMiddlewareConfig(emw.id, key, e.currentTarget.value)}
+                                                                        >
+                                                                            {schema.options?.map(opt => <option value={opt} key={opt}>{opt}</option>)}
+                                                                        </select>
+                                                                    ) : (
+                                                                        <input
+                                                                            type={schema.type === "number" ? "number" : "text"}
+                                                                            placeholder={schema.description}
+                                                                            value={emw.config[key]}
+                                                                            onInput={(e) => updateMiddlewareConfig(emw.id, key, e.currentTarget.value)}
+                                                                            class="input input-bordered input-xs bg-white/5 border-white/5 rounded-lg font-mono text-[10px]"
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                    {enabledMiddlewares.length === 0 && (
+                                        <div class="flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-white/5 bg-white/2 cursor-pointer hover:bg-white/5 transition-all">
+                                            <p class="text-[10px] text-white/20 font-bold uppercase tracking-widest">No Middlewares Enabled</p>
+                                            <p class="text-[10px] text-white/10 mt-1">Add one from the dropdown above</p>
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
                             </div>
 
