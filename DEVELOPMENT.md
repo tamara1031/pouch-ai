@@ -12,13 +12,13 @@ This guide covers how to set up the development environment for **pouch-ai**.
 
 - `cmd/pouch/`: Entry point for the Go backend.
 - `internal/`: Private application code (DDD structure).
-- `ui/`: Astro frontend application.
+- `frontend/`: Astro frontend application.
 
 ## Running Locally
 
 ### 1. Backend (Go)
 
-The backend serves the API and the static frontend files (from `ui/dist`).
+The backend serves the API and the static frontend files (from `frontend/dist`).
 
 ```bash
 # Run the backend (rebuilds on change if using air, otherwise manual restart)
@@ -32,7 +32,7 @@ By default, it listens on `http://localhost:8080`.
 For frontend development with hot-reload:
 
 ```bash
-cd ui
+cd frontend
 npm install
 npm run dev
 ```
@@ -45,7 +45,7 @@ For a full integration test, build the frontend and run the backend:
 
 ```bash
 # Build frontend
-cd ui && npm run build && cd ..
+cd frontend && npm run build && cd ..
 
 # Run backend (serves the built frontend)
 go run cmd/pouch/main.go
@@ -59,7 +59,7 @@ To create the single binary:
 
 1. **Build Frontend**:
    ```bash
-   cd ui
+   cd frontend
    npm install
    npm run build
    ```

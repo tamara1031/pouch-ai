@@ -29,7 +29,7 @@ Its primary goal is **Financial Safety** when using pay-per-token APIs (like Ope
 
 2. **Build the Frontend**:
    ```bash
-   cd ui
+   cd frontend
    npm install
    npm run build
    cd ..

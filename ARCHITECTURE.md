@@ -83,7 +83,7 @@ pouch-ai/
 │   ├── infra/                # Infrastructure Layer (Impl: DB, Providers)
 │   ├── server/               # Server Bootstrap & Wiring
 │   └── service/              # Service Layer (Business Logic)
-├── ui/                       # Astro Frontend
+├── frontend/                 # Astro Frontend
 └── data/                     # SQLite Database storage (runtime)
 ```
 
