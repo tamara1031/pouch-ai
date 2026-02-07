@@ -24,6 +24,7 @@ func main() {
 	// 2. Parse flags first
 	port := flag.Int("port", cfg.Port, "Port to listen on")
 	openaiURL := flag.String("openai-url", cfg.OpenAIURL, "Target OpenAI API Base URL")
+	openaiKey := flag.String("openai-api-key", cfg.OpenAIKey, "OpenAI API Key")
 	dataDir := flag.String("data", cfg.DataDir, "Directory to store data")
 	corsOrigins := flag.String("cors-origins", strings.Join(cfg.AllowedOrigins, ","), "Comma-separated list of allowed CORS origins")
 	flag.Parse()
@@ -31,6 +32,7 @@ func main() {
 	// Update config from flags
 	cfg.Port = *port
 	cfg.OpenAIURL = *openaiURL
+	cfg.OpenAIKey = *openaiKey
 	cfg.DataDir = *dataDir
 	if *corsOrigins != "" {
 		cfg.AllowedOrigins = strings.Split(*corsOrigins, ",")

@@ -33,7 +33,10 @@ func (b *OpenAIBuilder) Build(ctx context.Context, cfg *config.Config) (domain.P
 		apiKey = cfg.OpenAIKey
 	}
 
-	apiURL := os.Getenv("OPENAI_API_URL")
+	apiURL := os.Getenv("OPENAI_URL")
+	if apiURL == "" {
+		apiURL = os.Getenv("OPENAI_API_URL")
+	}
 	if apiURL == "" {
 		apiURL = cfg.OpenAIURL
 	}
