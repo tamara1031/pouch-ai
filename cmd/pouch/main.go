@@ -18,13 +18,10 @@ import (
 )
 
 func main() {
-	// 1. Load Configuration
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
+	// 1. Initialize Default Configuration
+	cfg := config.New()
 
-	// Allow flags to override env vars (optional, but good for local dev)
+	// 2. Parse flags first
 	port := flag.Int("port", cfg.Port, "Port to listen on")
 	openaiURL := flag.String("openai-url", cfg.OpenAIURL, "Target OpenAI API Base URL")
 	dataDir := flag.String("data", cfg.DataDir, "Directory to store data")
@@ -40,6 +37,11 @@ func main() {
 		for i := range cfg.AllowedOrigins {
 			cfg.AllowedOrigins[i] = strings.TrimSpace(cfg.AllowedOrigins[i])
 		}
+	}
+
+	// 3. Override with Environment Variables (Higher priority)
+	if err := cfg.LoadEnv(); err != nil {
+		log.Fatalf("Failed to load environment variables: %v", err)
 	}
 
 	// Ensure absolute path for data integrity

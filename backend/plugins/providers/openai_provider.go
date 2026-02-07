@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"pouch-ai/backend/config"
 	"pouch-ai/backend/domain"
 	"strings"
@@ -26,8 +27,20 @@ type OpenAIProvider struct {
 type OpenAIBuilder struct{}
 
 func (b *OpenAIBuilder) Build(ctx context.Context, cfg *config.Config) (domain.Provider, error) {
-	if cfg.OpenAIKey == "" {
-		return nil, nil // Silently skip if key is missing (caller can log WARN)
+	// Priority: Env > Flag > Default
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		apiKey = cfg.OpenAIKey
+	}
+
+	apiURL := os.Getenv("OPENAI_API_URL")
+	if apiURL == "" {
+		apiURL = cfg.OpenAIURL
+	}
+
+	if apiKey == "" {
+		fmt.Println("WARN: OpenAI API Key not found. 'openai' provider will be unavailable.")
+		return nil, nil
 	}
 
 	pricing, err := NewOpenAIPricing()
@@ -36,7 +49,7 @@ func (b *OpenAIBuilder) Build(ctx context.Context, cfg *config.Config) (domain.P
 	}
 	tokenCounter := NewTiktokenCounter()
 
-	return NewOpenAIProvider(cfg.OpenAIKey, cfg.OpenAIURL, pricing, tokenCounter), nil
+	return NewOpenAIProvider(apiKey, apiURL, pricing, tokenCounter), nil
 }
 
 func NewOpenAIProvider(apiKey string, baseURL string, pricing *OpenAIPricing, counter TokenCounter) *OpenAIProvider {
