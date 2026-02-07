@@ -115,22 +115,9 @@ func (p *OpenAIProvider) ParseOutputUsage(model domain.Model, responseBody []byt
 		var fullContent strings.Builder
 		lines := strings.Split(respStr, "\n")
 		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if !strings.HasPrefix(line, "data: ") || strings.HasSuffix(line, "[DONE]") {
-				continue
-			}
-			dataStr := strings.TrimPrefix(line, "data: ")
-			var chunk struct {
-				Choices []struct {
-					Delta struct {
-						Content string `json:"content"`
-					} `json:"delta"`
-				} `json:"choices"`
-			}
-			if err := json.Unmarshal([]byte(dataStr), &chunk); err == nil {
-				if len(chunk.Choices) > 0 {
-					fullContent.WriteString(chunk.Choices[0].Delta.Content)
-				}
+			content, err := p.ProcessStreamChunk([]byte(line))
+			if err == nil {
+				fullContent.WriteString(content)
 			}
 		}
 		finalText := fullContent.String()
@@ -141,6 +128,28 @@ func (p *OpenAIProvider) ParseOutputUsage(model domain.Model, responseBody []byt
 
 	// Fallback
 	return len(respStr) / 4, nil
+}
+
+func (p *OpenAIProvider) ProcessStreamChunk(chunk []byte) (string, error) {
+	chunk = bytes.TrimSpace(chunk)
+	if !bytes.HasPrefix(chunk, []byte("data: ")) || bytes.HasSuffix(chunk, []byte("[DONE]")) {
+		return "", nil
+	}
+	dataBytes := bytes.TrimPrefix(chunk, []byte("data: "))
+	var streamChunk struct {
+		Choices []struct {
+			Delta struct {
+				Content string `json:"content"`
+			} `json:"delta"`
+		} `json:"choices"`
+	}
+	if err := json.Unmarshal(dataBytes, &streamChunk); err != nil {
+		return "", err
+	}
+	if len(streamChunk.Choices) > 0 {
+		return streamChunk.Choices[0].Delta.Content, nil
+	}
+	return "", nil
 }
 
 func (p *OpenAIProvider) ParseRequest(body []byte) (domain.Model, bool, error) {
