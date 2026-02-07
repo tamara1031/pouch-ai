@@ -83,7 +83,7 @@ export default function MiddlewareComposition({ middlewares, middlewareInfos, se
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-5 border-l-2 border-white/10">
-                                {Object.keys(mwInfo.schema).map(key => (
+                                {Object.keys(mwInfo.schema || {}).map(key => (
                                     <SchemaField
                                         key={`${idx}-${key}`}
                                         id={key}

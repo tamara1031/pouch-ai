@@ -71,7 +71,7 @@ export default function CreateKeyModal({ isOpen, onClose, onSuccess, middlewareI
                     .filter(mw => mw.is_default)
                     .map(mw => ({
                         id: mw.id,
-                        config: Object.keys(mw.schema).reduce((acc, key) => {
+                        config: Object.keys(mw.schema || {}).reduce((acc, key) => {
                             acc[key] = mw.schema[key].default !== undefined ? mw.schema[key].default : "";
                             return acc;
                         }, {} as Record<string, any>)
