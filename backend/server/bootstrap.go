@@ -68,11 +68,12 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 		"limit":  {Type: domain.FieldTypeNumber, DisplayName: "Request Limit", Default: "10", Description: "Requests per period"},
 		"period": {Type: domain.FieldTypeSelect, DisplayName: "Period", Options: []string{"minute", "second"}, Default: "minute"},
 	})
-	mwRegistry.Register("budget", service_mw.NewUsageTrackingMiddleware(keyService), domain.MiddlewareSchema{
-		"limit":  {Type: domain.FieldTypeNumber, DisplayName: "Budget Limit", Default: "5.00", Description: "Budget limit in USD"},
-		"period": {Type: domain.FieldTypeSelect, DisplayName: "Period", Options: []string{"monthly", "weekly", "daily", "none"}, Default: "monthly"},
+	mwRegistry.Register("budget", service_mw.NewBudgetEnforcementMiddleware, domain.MiddlewareSchema{
+		"limit": {Type: domain.FieldTypeNumber, DisplayName: "Budget Limit", Default: "5.00", Description: "Budget limit in USD"},
 	})
-	mwRegistry.Register("budget_reset", service_mw.NewBudgetResetMiddleware(keyService), domain.MiddlewareSchema{})
+	mwRegistry.Register("budget_reset", service_mw.NewBudgetResetMiddleware(keyService), domain.MiddlewareSchema{
+		"period": {Type: domain.FieldTypeSelect, DisplayName: "Reset Period", Options: []string{"monthly", "weekly", "daily", "none"}, Default: "monthly"},
+	})
 
 	// Load external plugins
 	pluginManager := infra.NewPluginManager(mwRegistry, "./plugins/middlewares")

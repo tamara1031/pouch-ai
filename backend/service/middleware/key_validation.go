@@ -15,11 +15,6 @@ func NewKeyValidationMiddleware(_ map[string]string) domain.Middleware {
 			return nil, fmt.Errorf("key has expired")
 		}
 
-		// Budget check
-		if req.Key.IsBudgetExceeded() {
-			return nil, fmt.Errorf("budget limit exceeded")
-		}
-
 		return next.Handle(req)
 	})
 }

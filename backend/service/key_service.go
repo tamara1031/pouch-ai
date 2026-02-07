@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"pouch-ai/backend/domain"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -35,16 +34,11 @@ func NewKeyService(repo domain.Repository, registry domain.Registry, mwRegistry 
 }
 
 type CreateKeyInput struct {
-	Name         string
-	Provider     string
-	ExpiresAt    *int64
-	BudgetLimit  float64
-	BudgetPeriod string
-	RateLimit    int
-	RatePeriod   string
-	IsMock       bool
-	MockConfig   string
-	Middlewares  []domain.PluginConfig
+	Name        string
+	Provider    string
+	MockConfig  string
+	ExpiresAt   *int64
+	Middlewares []domain.PluginConfig
 }
 
 func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (string, *domain.Key, error) {
@@ -62,20 +56,8 @@ func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (strin
 	hash := s.hashKey(rawKey)
 	prefix := rawKey[:8]
 
-	// Use provided middlewares if any, otherwise use defaults
-	mws := input.Middlewares
-	if len(mws) == 0 {
-		mws = []domain.PluginConfig{
-			{ID: "rate_limit", Config: map[string]string{"limit": strconv.Itoa(input.RateLimit), "period": input.RatePeriod}},
-			{ID: "budget", Config: map[string]string{"limit": strconv.FormatFloat(input.BudgetLimit, 'f', -1, 64), "period": input.BudgetPeriod}},
-			{ID: "key_validation", Config: make(map[string]string)},
-			{ID: "budget_reset", Config: make(map[string]string)},
-			{ID: "usage_tracking", Config: make(map[string]string)},
-		}
-	}
-
 	k := &domain.Key{
-		ID:      0, // Will be set by repo
+		ID:      0,
 		Name:    input.Name,
 		KeyHash: hash,
 		Prefix:  prefix,
@@ -84,7 +66,7 @@ func (s *KeyService) CreateKey(ctx context.Context, input CreateKeyInput) (strin
 				ID:     input.Provider,
 				Config: map[string]string{"mock_response": input.MockConfig},
 			},
-			Middlewares: mws,
+			Middlewares: input.Middlewares,
 		},
 		BudgetUsage: 0,
 		LastResetAt: time.Now(),
@@ -143,17 +125,12 @@ func (s *KeyService) ListKeys(ctx context.Context) ([]*domain.Key, error) {
 }
 
 type UpdateKeyInput struct {
-	ID           int64
-	Name         string
-	Provider     string
-	BudgetLimit  float64
-	BudgetPeriod string
-	RateLimit    int
-	RatePeriod   string
-	IsMock       bool
-	MockConfig   string
-	ExpiresAt    *int64
-	Middlewares  []domain.PluginConfig
+	ID          int64
+	Name        string
+	Provider    string
+	MockConfig  string
+	ExpiresAt   *int64
+	Middlewares []domain.PluginConfig
 }
 
 func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error {
@@ -172,26 +149,12 @@ func (s *KeyService) UpdateKey(ctx context.Context, input UpdateKeyInput) error 
 	}
 
 	k.Name = input.Name
-	if k.Configuration == nil {
-		k.Configuration = &domain.KeyConfiguration{}
-	}
-	k.Configuration.Provider = domain.PluginConfig{
-		ID:     input.Provider,
-		Config: map[string]string{"mock_response": input.MockConfig},
-	}
-
-	// Use provided middlewares if any, otherwise update core ones
-	if len(input.Middlewares) > 0 {
-		k.Configuration.Middlewares = input.Middlewares
-	} else {
-		// Dynamic update of core middleware configs
-		k.Configuration.Middlewares = []domain.PluginConfig{
-			{ID: "rate_limit", Config: map[string]string{"limit": strconv.Itoa(input.RateLimit), "period": input.RatePeriod}},
-			{ID: "budget", Config: map[string]string{"limit": strconv.FormatFloat(input.BudgetLimit, 'f', -1, 64), "period": input.BudgetPeriod}},
-			{ID: "key_validation", Config: make(map[string]string)},
-			{ID: "budget_reset", Config: make(map[string]string)},
-			{ID: "usage_tracking", Config: make(map[string]string)},
-		}
+	k.Configuration = &domain.KeyConfiguration{
+		Provider: domain.PluginConfig{
+			ID:     input.Provider,
+			Config: map[string]string{"mock_response": input.MockConfig},
+		},
+		Middlewares: input.Middlewares,
 	}
 
 	if input.ExpiresAt != nil {
@@ -228,13 +191,14 @@ func (s *KeyService) DeleteKey(ctx context.Context, id int64) error {
 }
 
 func (s *KeyService) ResetKeyUsage(ctx context.Context, k *domain.Key) error {
-	k.ResetUsage()
+	k.BudgetUsage = 0
+	k.LastResetAt = time.Now()
 	if err := s.repo.ResetUsage(ctx, k.ID, k.LastResetAt); err != nil {
 		return err
 	}
 	s.cacheMu.Lock()
 	if entry, ok := s.cache[k.KeyHash]; ok {
-		entry.key.ResetUsage()
+		entry.key.BudgetUsage = 0
 		entry.key.LastResetAt = k.LastResetAt
 	}
 	s.cacheMu.Unlock()

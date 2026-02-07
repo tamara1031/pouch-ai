@@ -42,61 +42,6 @@ func (k *Key) IsExpired() bool {
 	return time.Now().After(*k.ExpiresAt)
 }
 
-func (k *Key) IsBudgetExceeded() bool {
-	if k.Configuration == nil {
-		return false
-	}
-	// Find budget middleware or provider limit
-	for _, m := range k.Configuration.Middlewares {
-		if m.ID == "budget" {
-			limitStr := m.Config["limit"]
-			var limit float64
-			fmt.Sscanf(limitStr, "%f", &limit)
-			if limit <= 0 {
-				return false
-			}
-			return k.BudgetUsage >= limit
-		}
-	}
-	return false
-}
-
-func (k *Key) NeedsReset() bool {
-	if k.Configuration == nil {
-		return false
-	}
-
-	var period string
-	for _, m := range k.Configuration.Middlewares {
-		if m.ID == "budget" {
-			period = m.Config["period"]
-			break
-		}
-	}
-
-	if period == "" || period == "none" {
-		return false
-	}
-
-	now := time.Now()
-	var duration time.Duration
-	switch period {
-	case "weekly":
-		duration = 7 * 24 * time.Hour
-	case "monthly":
-		duration = 30 * 24 * time.Hour
-	default:
-		return false
-	}
-
-	return now.After(k.LastResetAt.Add(duration))
-}
-
-func (k *Key) ResetUsage() {
-	k.BudgetUsage = 0
-	k.LastResetAt = time.Now()
-}
-
 func (k *Key) Validate() error {
 	if k.Name == "" {
 		return fmt.Errorf("key name is required")
