@@ -1,17 +1,18 @@
 import { useState, useEffect } from "preact/hooks";
-import type { Key, MiddlewareInfo } from "../types";
+import type { Key } from "../types";
+import { api } from "../api/api";
+import { usePluginInfo } from "../hooks/usePluginInfo";
 import KeyCard from "./KeyCard";
 
 export default function Dashboard() {
     const [keys, setKeys] = useState<Key[]>([]);
-    const [middlewareInfo, setMiddlewareInfo] = useState<MiddlewareInfo[]>([]);
+    const { middlewareInfo, loading: infoLoading } = usePluginInfo();
     const [loading, setLoading] = useState(true);
 
     const loadKeys = async () => {
         setLoading(true);
         try {
-            const res = await fetch("/v1/config/app-keys", { cache: "no-store" });
-            const data = await res.json();
+            const data = await api.keys.list();
             setKeys(data || []);
         } catch (err) {
             console.error("Failed to load keys:", err);
@@ -20,38 +21,23 @@ export default function Dashboard() {
         }
     };
 
-    const loadMiddlewareInfo = async () => {
-        try {
-            const res = await fetch("/v1/config/middlewares", { cache: "no-store" });
-            const data = await res.json();
-            setMiddlewareInfo(data?.middlewares || []);
-        } catch (err) {
-            console.error("Failed to load middleware info:", err);
-        }
-    };
-
     useEffect(() => {
         loadKeys();
-        loadMiddlewareInfo();
     }, []);
 
     const handleRevoke = async (id: number) => {
         if (!confirm("Are you sure? This cannot be undone.")) return;
         try {
-            const res = await fetch(`/v1/config/app-keys/${id}`, { method: "DELETE" });
-            if (res.ok) {
-                loadKeys();
-            } else {
-                alert("Failed to revoke key");
-            }
+            await api.keys.delete(id);
+            loadKeys();
         } catch (err) {
             console.error("Revoke error:", err);
+            alert("Failed to revoke key");
         }
     };
 
     const handleEdit = (key: Key) => {
-        const event = new CustomEvent('open-edit-modal', { detail: key });
-        window.dispatchEvent(event);
+        window.dispatchEvent(new CustomEvent('open-edit-modal', { detail: key }));
     };
 
     const activeKeys = keys.filter(k => !k.expires_at || new Date(k.expires_at * 1000) > new Date()).length;
