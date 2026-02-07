@@ -148,3 +148,13 @@ func (h *KeyHandler) GetProviderUsage(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, usage)
 }
+
+func (h *KeyHandler) ListProviders(c echo.Context) error {
+	providers, err := h.service.ListProviders(c.Request().Context())
+	if err != nil {
+		return InternalError(c, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"providers": providers,
+	})
+}

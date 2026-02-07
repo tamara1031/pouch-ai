@@ -249,6 +249,15 @@ func (s *KeyService) GetProviderUsage(ctx context.Context) (map[string]float64, 
 	return usage, nil
 }
 
+func (s *KeyService) ListProviders(ctx context.Context) ([]string, error) {
+	providers := s.registry.List()
+	names := make([]string, 0, len(providers))
+	for _, p := range providers {
+		names = append(names, p.Name())
+	}
+	return names, nil
+}
+
 // Helpers
 
 func (s *KeyService) generateRandomKey() (string, error) {
