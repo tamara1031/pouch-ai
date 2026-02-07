@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
-	"os"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
 	"pouch-ai/internal/api"
+	"pouch-ai/internal/config"
 	"pouch-ai/internal/database"
 	"pouch-ai/internal/domain"
 	"pouch-ai/internal/infra"
@@ -23,9 +23,9 @@ type Server struct {
 	Port int
 }
 
-func New(dataDir string, port int, targetURL string, assets fs.FS, allowedOrigins []string) (*Server, error) {
+func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	// 1. Init Database
-	if err := database.InitDB(dataDir); err != nil {
+	if err := database.InitDB(cfg.DataDir); err != nil {
 		return nil, err
 	}
 
@@ -42,9 +42,10 @@ func New(dataDir string, port int, targetURL string, assets fs.FS, allowedOrigin
 	registry := domain.NewRegistry()
 
 	// Register OpenAI Provider
-	openaiKey := os.Getenv("OPENAI_API_KEY")
-	if openaiKey != "" {
-		openaiProv := infra.NewOpenAIProvider(openaiKey, targetURL, pricing, tokenCounter)
+	// Use config for OpenAI Key if available, or fallback to Env (though config loader handles env)
+	// Actually config loader handles env, so we should use cfg.OpenAIKey
+	if cfg.OpenAIKey != "" {
+		openaiProv := infra.NewOpenAIProvider(cfg.OpenAIKey, cfg.TargetURL, pricing, tokenCounter)
 		registry.Register(openaiProv)
 	}
 
@@ -64,7 +65,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS, allowedOrigin
 		service_mw.NewBudgetResetMiddleware(keyService),   // Reset budget if needed
 		service_mw.NewKeyValidationMiddleware(),           // check if key is expired
 		service_mw.NewUsageTrackingMiddleware(keyService), // add usage and check if budget will be exceeded
-		service_mw.NewMockMiddleware(),                    // Mock requests if needed
+		// MockMiddleware removed as MockProvider is used
 	)
 
 	// 4. Initialize Handlers
@@ -79,8 +80,8 @@ func New(dataDir string, port int, targetURL string, assets fs.FS, allowedOrigin
 	e.Use(middleware.Recover())
 
 	corsConfig := middleware.DefaultCORSConfig
-	if len(allowedOrigins) > 0 {
-		corsConfig.AllowOrigins = allowedOrigins
+	if len(cfg.AllowedOrigins) > 0 {
+		corsConfig.AllowOrigins = cfg.AllowedOrigins
 	}
 	e.Use(middleware.CORSWithConfig(corsConfig))
 
@@ -100,7 +101,7 @@ func New(dataDir string, port int, targetURL string, assets fs.FS, allowedOrigin
 	// UI
 	e.GET("/*", echo.WrapHandler(http.FileServer(http.FS(assets))))
 
-	return &Server{echo: e, Port: port}, nil
+	return &Server{echo: e, Port: cfg.Port}, nil
 }
 
 func (s *Server) Start() error {

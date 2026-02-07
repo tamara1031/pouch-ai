@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"pouch-ai/internal/config"
 	"testing"
 	"testing/fstest"
 )
@@ -55,7 +56,13 @@ func TestNew_CORS(t *testing.T) {
 				t.Fatalf("Failed to create test dir: %v", err)
 			}
 
-			srv, err := New(testDir, 0, "http://target.com", assets, tc.allowedOrigins)
+			cfg := &config.Config{
+				DataDir:        testDir,
+				Port:           0,
+				TargetURL:      "http://target.com",
+				AllowedOrigins: tc.allowedOrigins,
+			}
+			srv, err := New(cfg, assets)
 			if err != nil {
 				t.Fatalf("Failed to create server: %v", err)
 			}

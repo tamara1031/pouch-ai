@@ -39,7 +39,16 @@ func TestKeyService_CreateKey(t *testing.T) {
 	reg := &mockRegistry{}
 	svc := service.NewKeyService(repo, reg)
 
-	raw, key, err := svc.CreateKey(context.Background(), "test-key", "openai", nil, 10.0, "monthly", false, "", 10, "minute")
+	input := service.CreateKeyInput{
+		Name:         "test-key",
+		Provider:     "openai",
+		BudgetLimit:  10.0,
+		BudgetPeriod: "monthly",
+		RateLimit:    10,
+		RatePeriod:   "minute",
+	}
+
+	raw, key, err := svc.CreateKey(context.Background(), input)
 	if err != nil {
 		t.Fatalf("Failed to create key: %v", err)
 	}
@@ -57,7 +66,16 @@ func TestKeyService_VerifyKey(t *testing.T) {
 	reg := &mockRegistry{}
 	svc := service.NewKeyService(repo, reg)
 
-	raw, _, _ := svc.CreateKey(context.Background(), "test-key", "openai", nil, 10.0, "monthly", false, "", 10, "minute")
+	input := service.CreateKeyInput{
+		Name:         "test-key",
+		Provider:     "openai",
+		BudgetLimit:  10.0,
+		BudgetPeriod: "monthly",
+		RateLimit:    10,
+		RatePeriod:   "minute",
+	}
+
+	raw, _, _ := svc.CreateKey(context.Background(), input)
 
 	key, err := svc.VerifyKey(context.Background(), raw)
 	if err != nil {
