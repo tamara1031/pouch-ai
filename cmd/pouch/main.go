@@ -26,14 +26,14 @@ func main() {
 
 	// Allow flags to override env vars (optional, but good for local dev)
 	port := flag.Int("port", cfg.Port, "Port to listen on")
-	target := flag.String("target", cfg.TargetURL, "Target OpenAI API Base URL")
+	openaiURL := flag.String("openai-url", cfg.OpenAIURL, "Target OpenAI API Base URL")
 	dataDir := flag.String("data", cfg.DataDir, "Directory to store data")
 	corsOrigins := flag.String("cors-origins", strings.Join(cfg.AllowedOrigins, ","), "Comma-separated list of allowed CORS origins")
 	flag.Parse()
 
 	// Update config from flags
 	cfg.Port = *port
-	cfg.TargetURL = *target
+	cfg.OpenAIURL = *openaiURL
 	cfg.DataDir = *dataDir
 	if *corsOrigins != "" {
 		cfg.AllowedOrigins = strings.Split(*corsOrigins, ",")
@@ -51,7 +51,7 @@ func main() {
 
 	log.Printf("Starting pouch-ai on port %d...", cfg.Port)
 	log.Printf("Data Directory: %s", cfg.DataDir)
-	log.Printf("Target Proxy: %s", cfg.TargetURL)
+	log.Printf("OpenAI Proxy: %s", cfg.OpenAIURL)
 
 	// Sub-filesystem for ui/dist
 	distFS, err := fs.Sub(ui.Assets, "dist")

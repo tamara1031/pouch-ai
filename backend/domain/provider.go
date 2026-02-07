@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"pouch-ai/backend/config"
 )
 
 var ErrProviderNotFound = errors.New("provider not found")
@@ -57,6 +58,10 @@ type ProviderRegistry interface {
 	Get(name string) (Provider, error)
 	List() []Provider
 	ListInfo() []ProviderInfo
+}
+
+type ProviderBuilder interface {
+	Build(ctx context.Context, cfg *config.Config) (Provider, error)
 }
 
 type DefaultProviderRegistry struct {

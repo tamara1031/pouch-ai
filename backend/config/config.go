@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	Port           int
-	TargetURL      string
+	OpenAIURL      string
 	DataDir        string
 	AllowedOrigins []string
 	OpenAIKey      string
@@ -19,7 +19,7 @@ func Load() (*Config, error) {
 	// Defaults
 	cfg := &Config{
 		Port:           8080,
-		TargetURL:      "https://api.openai.com",
+		OpenAIURL:      "https://api.openai.com",
 		DataDir:        "./data",
 		AllowedOrigins: []string{"*"},
 	}
@@ -33,8 +33,8 @@ func Load() (*Config, error) {
 		cfg.Port = port
 	}
 
-	if val := os.Getenv("TARGET_URL"); val != "" {
-		cfg.TargetURL = val
+	if val := os.Getenv("OPENAI_API_URL"); val != "" {
+		cfg.OpenAIURL = val
 	}
 
 	if val := os.Getenv("DATA_DIR"); val != "" {

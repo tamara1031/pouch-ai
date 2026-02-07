@@ -1,23 +1,57 @@
 package plugins
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"plugin"
+	"pouch-ai/backend/config"
 	"pouch-ai/backend/domain"
+	"pouch-ai/backend/plugins/middlewares"
+	"pouch-ai/backend/plugins/providers"
 )
 
 type PluginManager struct {
-	registry  domain.MiddlewareRegistry
-	pluginDir string
+	mwRegistry domain.MiddlewareRegistry
+	pRegistry  domain.ProviderRegistry
+	cfg        *config.Config
+	pluginDir  string
 }
 
-func NewPluginManager(registry domain.MiddlewareRegistry, pluginDir string) *PluginManager {
+func NewPluginManager(mwRegistry domain.MiddlewareRegistry, pRegistry domain.ProviderRegistry, cfg *config.Config, pluginDir string) *PluginManager {
 	return &PluginManager{
-		registry:  registry,
-		pluginDir: pluginDir,
+		mwRegistry: mwRegistry,
+		pRegistry:  pRegistry,
+		cfg:        cfg,
+		pluginDir:  pluginDir,
 	}
+}
+
+// InitializeBuiltins registers all built-in middlewares and providers.
+func (m *PluginManager) InitializeBuiltins() error {
+	// 1. Initialise Middlewares
+	m.mwRegistry.Register(middlewares.GetInfo(), middlewares.NewRateLimitMiddleware)
+
+	// 2. Initialise Providers via Builders
+	ctx := context.Background()
+	// Built-in provider builders
+	providerBuilders := []domain.ProviderBuilder{
+		&providers.OpenAIBuilder{},
+		&providers.MockBuilder{},
+	}
+
+	for _, b := range providerBuilders {
+		p, err := b.Build(ctx, m.cfg)
+		if err != nil {
+			return fmt.Errorf("failed to build provider: %w", err)
+		}
+		if p != nil {
+			m.pRegistry.Register(p)
+		}
+	}
+
+	return nil
 }
 
 func (m *PluginManager) LoadPlugins() error {
@@ -71,7 +105,7 @@ func (m *PluginManager) loadPlugin(path string) error {
 	id := filepath.Base(path)
 	id = id[:len(id)-len(filepath.Ext(id))]
 
-	m.registry.Register(domain.MiddlewareInfo{
+	m.mwRegistry.Register(domain.MiddlewareInfo{
 		ID:     id,
 		Schema: schema,
 	}, *factory)

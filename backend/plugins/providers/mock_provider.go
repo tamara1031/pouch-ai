@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"pouch-ai/backend/config"
 	"pouch-ai/backend/domain"
 	"strings"
 	"sync"
@@ -17,6 +18,12 @@ type MockProvider struct {
 	server *httptest.Server
 	config map[string]string
 	mu     *sync.RWMutex
+}
+
+type MockBuilder struct{}
+
+func (b *MockBuilder) Build(ctx context.Context, cfg *config.Config) (domain.Provider, error) {
+	return NewMockProvider(), nil
 }
 
 func NewMockProvider() *MockProvider {

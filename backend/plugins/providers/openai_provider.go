@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"pouch-ai/backend/config"
 	"pouch-ai/backend/domain"
 	"strings"
 	"time"
@@ -20,6 +21,22 @@ type OpenAIProvider struct {
 	tokenCounter TokenCounter
 	apiKey       string
 	baseURL      string
+}
+
+type OpenAIBuilder struct{}
+
+func (b *OpenAIBuilder) Build(ctx context.Context, cfg *config.Config) (domain.Provider, error) {
+	if cfg.OpenAIKey == "" {
+		return nil, nil // Silently skip if key is missing (caller can log WARN)
+	}
+
+	pricing, err := NewOpenAIPricing()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load openai pricing: %w", err)
+	}
+	tokenCounter := NewTiktokenCounter()
+
+	return NewOpenAIProvider(cfg.OpenAIKey, cfg.OpenAIURL, pricing, tokenCounter), nil
 }
 
 func NewOpenAIProvider(apiKey string, baseURL string, pricing *OpenAIPricing, counter TokenCounter) *OpenAIProvider {

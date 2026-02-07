@@ -15,8 +15,6 @@ import (
 	"pouch-ai/backend/domain"
 	"pouch-ai/backend/infra/engine"
 	"pouch-ai/backend/plugins"
-	"pouch-ai/backend/plugins/middlewares"
-	"pouch-ai/backend/plugins/providers"
 	"pouch-ai/backend/service"
 )
 
@@ -34,49 +32,28 @@ func New(cfg *config.Config, assets fs.FS) (*Server, error) {
 	// 2. Initialize Repositories and Infrastructure
 	keyRepo := database.NewSQLiteKeyRepository(database.DB)
 
-	pricing, err := providers.NewOpenAIPricing()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load pricing: %w", err)
-	}
-
-	tokenCounter := providers.NewTiktokenCounter()
-
-	registry := domain.NewProviderRegistry()
-
-	// Register OpenAI Provider
-	// Use config for OpenAI Key if available, or fallback to Env (though config loader handles env)
-	// Actually config loader handles env, so we should use cfg.OpenAIKey
-	if cfg.OpenAIKey != "" {
-		openaiProv := providers.NewOpenAIProvider(cfg.OpenAIKey, cfg.TargetURL, pricing, tokenCounter)
-		registry.Register(openaiProv)
-	} else {
-		fmt.Println("WARN: OpenAI API Key not found. 'openai' provider will be unavailable.")
-	}
-
-	// Register Mock Provider
-	mockProv := providers.NewMockProvider()
-	registry.Register(mockProv)
-
-	// TODO: Add more providers (Anthropic, Gemini, etc.) here
-
 	// 3. Initialize Application Services
 	mwRegistry := domain.NewMiddlewareRegistry()
-	keyService := service.NewKeyService(keyRepo, registry, mwRegistry)
+	pRegistry := domain.NewProviderRegistry()
 
-	executionHandler := engine.NewExecutionHandler(keyRepo)
-	mwRegistry.Register(middlewares.GetInfo(), middlewares.NewRateLimitMiddleware)
+	// Initialize Plugin Manager and register built-ins
+	pluginManager := plugins.NewPluginManager(mwRegistry, pRegistry, cfg, "./backend/plugins/middlewares")
+	if err := pluginManager.InitializeBuiltins(); err != nil {
+		return nil, fmt.Errorf("failed to initialize built-in plugins: %w", err)
+	}
 
 	// Load external plugins
-	pluginManager := plugins.NewPluginManager(mwRegistry, "./backend/plugins/middlewares")
 	if err := pluginManager.LoadPlugins(); err != nil {
 		fmt.Printf("WARN: Failed to load external plugins: %v\n", err)
 	}
 
+	keyService := service.NewKeyService(keyRepo, pRegistry, mwRegistry)
+	executionHandler := engine.NewExecutionHandler(keyRepo)
 	proxyService := service.NewProxyService(executionHandler, mwRegistry, keyService)
 
 	// 4. Initialize Handlers
 	keyHandler := api.NewKeyHandler(keyService)
-	proxyHandler := api.NewProxyHandler(proxyService, registry)
+	proxyHandler := api.NewProxyHandler(proxyService, pRegistry)
 
 	// 5. Echo Setup
 	e := echo.New()
