@@ -5,8 +5,8 @@ export default function Modals() {
     const [editKey, setEditKey] = useState<Key | null>(null);
     const [newKeyRaw, setNewKeyRaw] = useState<string | null>(null);
     const [createMode, setCreateMode] = useState<"prepaid" | "subscription">("prepaid");
-    const [showMock, setShowMock] = useState(false);
-    const [showEditMock, setShowEditMock] = useState(false);
+    const [createProvider, setCreateProvider] = useState("openai");
+    const [editProvider, setEditProvider] = useState("openai");
     const [newKeyCopied, setNewKeyCopied] = useState(false);
 
     const createModalRef = useRef<HTMLInputElement>(null);
@@ -16,7 +16,7 @@ export default function Modals() {
     useEffect(() => {
         const handleOpenEdit = (e: any) => {
             setEditKey(e.detail);
-            setShowEditMock(e.detail.is_mock);
+            setEditProvider(e.detail.provider);
             if (editModalRef.current) editModalRef.current.checked = true;
         };
 
@@ -40,13 +40,14 @@ export default function Modals() {
             period = fd.get("budget_period") as string;
         }
 
+        const provider = fd.get("provider") || "openai";
         const payload = {
             name: fd.get("name"),
-            provider: fd.get("provider") || "openai",
+            provider: provider,
             expires_at,
             budget_limit: parseFloat(fd.get("budget_limit") as string),
             budget_period: period,
-            is_mock: showMock,
+            is_mock: provider === "mock",
             mock_config: fd.get("mock_config"),
             rate_limit: parseInt(fd.get("rate_limit") as string) || 10,
             rate_period: fd.get("rate_period") || "minute",
@@ -65,7 +66,7 @@ export default function Modals() {
                 if (createModalRef.current) createModalRef.current.checked = false;
                 if (newKeyModalRef.current) newKeyModalRef.current.checked = true;
                 form.reset();
-                setShowMock(false);
+                setCreateProvider("openai");
                 setCreateMode("prepaid");
             } else {
                 alert("Failed to create key");
@@ -81,12 +82,13 @@ export default function Modals() {
 
         const form = e.target as HTMLFormElement;
         const fd = new FormData(form);
+        const provider = fd.get("provider");
 
         const payload = {
             name: fd.get("name"),
-            provider: fd.get("provider"),
+            provider: provider,
             budget_limit: parseFloat(fd.get("budget_limit") as string),
-            is_mock: showEditMock,
+            is_mock: provider === "mock",
             mock_config: fd.get("mock_config"),
             rate_limit: parseInt(fd.get("rate_limit") as string) || 10,
             rate_period: fd.get("rate_period") || "minute",
@@ -132,7 +134,7 @@ export default function Modals() {
                             </div>
                             <div class="form-control">
                                 <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Provider</span></label>
-                                <select name="provider" class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl text-sm">
+                                <select name="provider" class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl text-sm" onChange={(e) => setCreateProvider(e.currentTarget.value)}>
                                     <option value="openai" selected>OpenAI</option>
                                     <option value="mock">Mock</option>
                                     <option value="anthropic" disabled>Anthropic (Soon)</option>
@@ -182,18 +184,14 @@ export default function Modals() {
                             </div>
                         </div>
 
-                        <div class="form-control p-4 rounded-xl bg-white/5 border border-white/5 mt-2">
-                            <label class="label cursor-pointer justify-between p-0 mb-3">
-                                <div class="flex flex-col">
-                                    <span class="font-bold text-sm text-white/80">Simulation Mode</span>
-                                    <span class="text-[10px] text-white/20 uppercase font-bold tracking-wider">Return mock responses for testing</span>
-                                </div>
-                                <input type="checkbox" class="toggle toggle-primary toggle-sm" checked={showMock} onChange={() => setShowMock(!showMock)} />
-                            </label>
-                            {showMock && (
+                        {createProvider === "mock" && (
+                            <div class="form-control p-4 rounded-xl bg-white/5 border border-white/5 mt-2">
+                                <label class="label mb-2">
+                                    <span class="font-bold text-sm text-white/80">Mock Configuration</span>
+                                </label>
                                 <textarea name="mock_config" class="textarea textarea-bordered h-24 font-mono text-[10px] w-full bg-black/20 border-white/5 rounded-xl" defaultValue={`{"choices":[{"message":{"content":"Hello from Mock!", "role":"assistant"}}]}`} />
-                            )}
-                        </div>
+                            </div>
+                        )}
 
                         <div class="flex justify-end gap-3 pt-6 border-t border-white/5">
                             <label for="create-key-modal" class="btn btn-ghost rounded-xl text-white/40 font-bold uppercase tracking-widest text-[10px]">Cancel</label>
@@ -220,7 +218,7 @@ export default function Modals() {
                                 </div>
                                 <div class="form-control">
                                     <label class="label"><span class="label-text font-bold text-white/60 text-[10px] uppercase tracking-widest">Provider</span></label>
-                                    <select name="provider" defaultValue={editKey.provider} class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl text-sm">
+                                    <select name="provider" defaultValue={editKey.provider} class="select select-bordered w-full bg-white/5 border-white/5 rounded-xl text-sm" onChange={(e) => setEditProvider(e.currentTarget.value)}>
                                         <option value="openai">OpenAI</option>
                                         <option value="mock">Mock</option>
                                         <option value="anthropic" disabled>Anthropic (Soon)</option>
@@ -242,18 +240,14 @@ export default function Modals() {
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-control p-4 rounded-xl bg-white/5 border border-white/5">
-                                <label class="label cursor-pointer justify-between p-0 mb-3">
-                                    <div class="flex flex-col">
-                                        <span class="font-bold text-sm text-white/80">Simulation Mode</span>
-                                        <span class="text-[10px] text-white/20 uppercase font-bold tracking-wider">Return mock responses</span>
-                                    </div>
-                                    <input type="checkbox" class="toggle toggle-primary toggle-sm" checked={showEditMock} onChange={() => setShowEditMock(!showEditMock)} />
-                                </label>
-                                {showEditMock && (
+                            {editProvider === "mock" && (
+                                <div class="form-control p-4 rounded-xl bg-white/5 border border-white/5">
+                                    <label class="label mb-2">
+                                        <span class="font-bold text-sm text-white/80">Mock Configuration</span>
+                                    </label>
                                     <textarea name="mock_config" defaultValue={editKey.mock_config} class="textarea textarea-bordered w-full h-32 font-mono text-[10px] bg-black/20 border-white/5 rounded-xl"></textarea>
-                                )}
-                            </div>
+                                </div>
+                            )}
                             <div class="flex justify-end gap-3 pt-6 border-t border-white/5">
                                 <label for="edit-key-modal" class="btn btn-ghost rounded-xl text-white/40 font-bold uppercase tracking-widest text-[10px]">Cancel</label>
                                 <button type="submit" class="btn btn-primary px-10 rounded-xl font-bold uppercase tracking-widest text-[11px] h-11 shadow-lg shadow-primary/20">Save Changes</button>
