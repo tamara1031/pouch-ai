@@ -8,6 +8,7 @@
 ### 2.1 Domain Layer (`backend/domain`)
 The heart of the application, containing business logic and interfaces.
 - **Key Domain**: Manages API keys, budgets, and rate limits.
+- **Plugin Domain**: Consolidates plugin-related types (Schema, Field, Config, Info) and defines registry interfaces.
 - **Provider Domain**: Defines the abstraction for LLM backends (e.g., OpenAI, Mock).
 - **Proxy Domain**: Defines the request/response flow using the **Chain of Responsibility** pattern.
 
@@ -28,11 +29,14 @@ Concrete implementations of domain interfaces and external system interactions.
 - **Middleware**: Authentication, routing, and plugin-based logic.
 - **Logging**: Centralized structured logging using Go's `log/slog` (`backend/util/logger`).
 
-## 3. Plugin System
-The system is designed for high extensibility through a decentralized plugin registration mechanism.
+### 3.1 Generic Registry
+The system utilizes a **Generic Registry** implementation (`backend/util/registry`) to manage both providers and middlewares. This ensures consistency and reduces code duplication.
 
-- **Decentralized Registration**: Each plugin (provider or middleware) registers itself via a `registry.go` file within its own package. This eliminates the need for hardcoded lists in the core engine.
-- **Schema-Driven**: Plugins can define their configuration schemas, which are used by the frontend to dynamically generate configuration UIs.
+- **Provider Registry**: Stores initialized `Provider` instances.
+- **Middleware Registry**: Stores **Middleware Factories** (`func(map[string]any) Middleware`), allowing middlewares to be instantiated with specific configurations for each request chain.
+
+### 3.2 Schema-Driven Plugins
+Plugins define their configuration schemas (using `PluginSchema`), which are used by the frontend to dynamically generate configuration UIs. This allows new functionality to be added without frontend changes.
 
 ## 4. Data Flow & Middleware Chain
 
@@ -67,9 +71,10 @@ sequenceDiagram
 ## 5. Frontend Architecture
 The frontend is built with Astro and Preact, following a modular and centralized approach.
 
-- **Centralized API Client**: All backend communication is localized in `frontend/src/api/api.ts`, ensuring consistent error handling and type safety.
-- **Shared UI Components**: Complex forms (like API key configuration) are extracted into shared components (`KeyForm.tsx`) to ensure a consistent UX across creation and editing flows.
-- **Stateful Hooks**: Custom hooks (e.g., `usePluginInfo`) are used to manage shared stateful logic, such as fetching provider and middleware metadata.
+- **Centralized API Client**: All backend communication is localized in `frontend/src/api/api.ts`, ensuring consistent error handling and type safety using shared request/response interfaces.
+- **Domain-Driven Component Design**: Components are organized into `features/` (domain-specific logic, e.g., keys) and `ui/` (generic, reusable design system elements).
+- **Reactive State Management**: Uses **Preact Signals** for efficient and granular state management, particularly for cross-component interactions like modal visibility and data sharing without global events.
+- **Dynamic configuration**: Shared components (like `KeyForm.tsx`) and schema-driven UIs ensure consistent configuration flows across creation and editing.
 
 ## 6. Directory Structure
 
@@ -84,17 +89,22 @@ pouch-ai/
 │   ├── plugins/              # Plugin Manager and Registries
 │   ├── server/               # Server Bootstrap & Wiring
 │   ├── service/              # Service Layer (Orchestration)
-│   └── util/logger/          # Structured Logging System
+│   └── util/
+│       ├── logger/           # Structured Logging System
+│       └── registry/         # Generic Registry Implementation
 ├── frontend/
-│   ├── src/api/              # Centralized API Client
-│   ├── src/components/       # Modular UI Components
-│   ├── src/hooks/            # Custom React Hooks
+│   ├── src/api/              # Type-safe API Client
+│   ├── src/components/       # Modular UI & Feature Components
+│   │   ├── ui/               # Reusable atomic components (Badge, CopyButton)
+│   │   ├── features/         # Domain-specific components (KeyCard, Dashboard)
+│   │   └── modals/           # Complex stateful modal components
+│   ├── src/hooks/            # Custom Hooks and Signal-based State
 │   └── src/types.ts/         # Shared Type Definitions
 └── data/                     # SQLite Database storage (runtime)
 ```
 
 ## 7. Technology Stack
 - **Backend**: Go 1.25+ (Echo Framework, slog)
-- **Frontend**: Astro + TailwindCSS + DaisyUI + Preact
+- **Frontend**: Astro + TailwindCSS + DaisyUI + Preact + Preact Signals
 - **Database**: SQLite (modernc.org/sqlite - CGO free)
 - **Token Counting**: tiktoken-go

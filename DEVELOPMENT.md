@@ -77,14 +77,13 @@ Pouch AI's plugin system is decentralized, making it easy to add new LLM provide
 ### Adding a Provider
 1. Create a new package in `backend/plugins/providers/` (e.g., `anthropic`).
 2. Implement the `domain.Provider` and `domain.ProviderBuilder` interfaces.
-3. Add an `init()` function with a call to `Register()` to decentralized registration.
-4. Export the builder via a `registry.go` in your package.
+3. Export your builder via the `GetBuilders()` function in `backend/plugins/providers/registry.go`.
 
 ### Adding a Middleware
 1. Create a new package in `backend/plugins/middlewares/`.
 2. Implement the `domain.Middleware` interface.
-3. Define the middleware metadata (ID and schema).
-4. Register the middleware in the decentralized registry.
+3. Define the middleware metadata (`domain.PluginInfo`) and a factory function.
+4. Register the middleware in the `GetBuiltins()` function in `backend/plugins/middlewares/registry.go`.
 
 ## Testing
 
@@ -104,7 +103,8 @@ go test ./backend/service/...
 
 ### Frontend Verification
 
-The frontend currently relies on manual verification. When making changes to shared logic or UI, verify:
-1. **API Client**: Ensure `src/api/api.ts` correctly maps backend responses.
-2. **Form Consistency**: Verify that `KeyForm.tsx` handles both creation and editing correctly.
-3. **Build Status**: Always run `npm run build` in the `frontend` directory to catch syntax or type errors.
+The frontend follows a modular architecture. When making changes, verify:
+1. **API Client & Types**: Ensure `src/api/api.ts` and `src/types.ts` are updated together for any API change.
+2. **Component Reusability**: Use generic components from `src/components/ui` for common UI patterns.
+3. **State Management**: Use Preact Signals in `src/hooks/` for shared state (like modal visibility) to avoid event-based complexity.
+4. **Build Status**: Always run `npm run build` in the `frontend` directory to catch syntax or type errors.
